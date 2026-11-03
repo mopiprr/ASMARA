@@ -21,6 +21,7 @@ try
     }).AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
     builder.Services.AddAsmaraServices(builder.Configuration);
+    builder.Services.AddAsmaraMediator();
     builder.Services.AddAsmaraSecurity(builder.Configuration);
     builder.Services.AddAsmaraOpenApi();
 
