@@ -1,6 +1,5 @@
 using ASMARA.API.Extensions;
 using Serilog;
-using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 Log.Logger = new LoggerConfiguration()
@@ -32,27 +31,20 @@ try
             policy.AllowAnyHeader();
             policy.AllowAnyMethod();
             policy.AllowAnyOrigin();
+            policy.WithExposedHeaders("X-Correlation-Id");
         });
     });
 
     var app = builder.Build();
 
+    app.UseCorrelationId();
     app.UseAsmaraRequestLogging();
     //app.UseExceptionHandler();
     app.UseAsmaraOpenApi();
     app.UseHttpsRedirection();
     app.UseCors();
     app.UseAuthentication();
-
-    app.Use(async (context, next) =>
-    {
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
-        using (Serilog.Context.LogContext.PushProperty("UserId", userId))
-        {
-            await next(context);
-        }
-    });
-
+    app.UseUserLogContext();
     app.UseAuthorization();
     app.MapControllers();
 

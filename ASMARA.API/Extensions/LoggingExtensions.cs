@@ -39,6 +39,6 @@ public static class LoggingExtensions
         => exception is not null || httpContext.Response.StatusCode >= StatusCodes.Status500InternalServerError
             ? LogEventLevel.Error
             : httpContext.Response.StatusCode >= StatusCodes.Status400BadRequest
-                ? LogEventLevel.Error
+                ? LogEventLevel.Warning
                 : LogEventLevel.Information;
 }
