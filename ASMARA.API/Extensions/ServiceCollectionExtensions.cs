@@ -1,6 +1,6 @@
-﻿using Asmara.API.Data;
-using ASMARA.API.Data;
+﻿using ASMARA.API.Data;
 using ASMARA.API.Data.Repositories;
+using ASMARA.API.Services.TicketFlow;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Extensions;
@@ -13,6 +13,8 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<AsmaraDbContext>(options => options.UseSqlServer(connectionString));
 
         #region Services
+        services.AddScoped<IApproverResolver, ApproverResolver>();
+        services.AddScoped<ITicketFlowService, TicketFlowService>();
         #endregion
 
         #region Repositories
