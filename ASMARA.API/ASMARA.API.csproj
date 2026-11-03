@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>7a7daf40-2370-46b5-985c-b20e66e5d061</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,6 +36,7 @@
     <Folder Include="Middlewares\" />
     <Folder Include="Entities\" />
     <Folder Include="Services\Email\" />
+    <Folder Include="Services\Workflow\" />
   </ItemGroup>
 
 </Project>

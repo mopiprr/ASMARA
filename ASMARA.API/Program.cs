@@ -49,10 +49,8 @@ try
     var app = builder.Build();
 
     app.UseCorrelationId();
-    app.UseExceptionHandler();
-
     app.UseAsmaraRequestLogging();
-    //app.UseExceptionHandler();
+    app.UseExceptionHandler();
     app.UseAsmaraOpenApi();
     app.UseHttpsRedirection();
     app.UseCors();
