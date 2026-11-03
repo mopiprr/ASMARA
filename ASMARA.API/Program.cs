@@ -1,8 +1,6 @@
 using ASMARA.API.Common.ExceptionHandlers;
 using ASMARA.API.Extensions;
 using Serilog;
-using System.Security.Claims;
-using ASMARA.API.Common.ExceptionHandlers;
 using System.Text.Json.Serialization;
 
 Log.Logger = new LoggerConfiguration()

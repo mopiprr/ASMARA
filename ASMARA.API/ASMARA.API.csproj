@@ -36,7 +36,7 @@
     <Folder Include="Middlewares\" />
     <Folder Include="Entities\" />
     <Folder Include="Services\Email\" />
-    <Folder Include="Services\Workflow\" />
+    <Folder Include="Services\TicketFlow\" />
   </ItemGroup>
 
 </Project>
