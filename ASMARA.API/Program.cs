@@ -1,23 +1,69 @@
-var builder = WebApplication.CreateBuilder(args);
+using ASMARA.API.Extensions;
+using Serilog;
+using System.Security.Claims;
+using System.Text.Json.Serialization;
 
-// Add services to the container.
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.MapOpenApi();
+    Log.Information("Starting ASMARA API");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Add services to the container.
+    builder.AddAsmaraSerilog();
+    builder.Services.AddControllers(options =>
+    {
+        options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+    }).AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+    builder.Services.AddAsmaraServices(builder.Configuration);
+    builder.Services.AddAsmaraSecurity(builder.Configuration);
+    builder.Services.AddAsmaraOpenApi();
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.AllowAnyHeader();
+            policy.AllowAnyMethod();
+            policy.AllowAnyOrigin();
+        });
+    });
+
+    var app = builder.Build();
+
+    app.UseAsmaraRequestLogging();
+    //app.UseExceptionHandler();
+    app.UseAsmaraOpenApi();
+    app.UseHttpsRedirection();
+    app.UseCors();
+    app.UseAuthentication();
+
+    app.Use(async (context, next) =>
+    {
+        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
+        using (Serilog.Context.LogContext.PushProperty("UserId", userId))
+        {
+            await next(context);
+        }
+    });
+
+    app.UseAuthorization();
+    app.MapControllers();
+
+    await app.RunAsync();
+}
+catch (Exception ex) when (ex is not HostAbortedException)
+{
+    Log.Fatal(ex, "ASMARA API terminated unexpectedly");
+}
+finally
+{
+    Log.Information("ASMARA API stopped");
+    Log.CloseAndFlush();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

@@ -8,7 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.*" />
+    <PackageReference Include="MailKit" Version="4.*" />
     <PackageReference Include="MediatR" Version="12.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
@@ -22,6 +24,17 @@
 
   <ItemGroup>
     <Folder Include="Controllers\" />
+    <Folder Include="Features\Auth\" />
+    <Folder Include="Features\Maintenance\" />
+    <Folder Include="Features\Dashboard\" />
+    <Folder Include="Features\Catalog\" />
+    <Folder Include="Features\PendingTasks\" />
+    <Folder Include="Features\Procurement\" />
+    <Folder Include="Features\Ticket\" />
+    <Folder Include="Models\" />
+    <Folder Include="Middlewares\" />
+    <Folder Include="Entities\" />
+    <Folder Include="Services\Email\" />
   </ItemGroup>
 
 </Project>

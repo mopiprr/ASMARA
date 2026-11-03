@@ -10,3 +10,6 @@
 # User-specific files
 *.user
 *.suo
+
+Asmara.API/Logs/
+Asmara.API/appsettings.Development.json
