@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>59c6d2d6-e40f-46ed-9e33-e9e224bbe677</UserSecretsId>
+    <UserSecretsId>7a7daf40-2370-46b5-985c-b20e66e5d061</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,6 +34,7 @@
     <Folder Include="Models\" />
     <Folder Include="Middlewares\" />
     <Folder Include="Services\Email\" />
+    <Folder Include="Services\TicketFlow\" />
   </ItemGroup>
 
 </Project>

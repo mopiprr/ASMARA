@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Asmara.API.Entities;
+﻿namespace Asmara.API.Entities;
 
 public partial class Employee
 {

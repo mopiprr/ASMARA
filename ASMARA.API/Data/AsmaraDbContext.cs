@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Asmara.API.Entities;
+﻿using Asmara.API.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Asmara.API.Data;

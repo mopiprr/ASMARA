@@ -1,7 +1,6 @@
 using ASMARA.API.Common.ExceptionHandlers;
 using ASMARA.API.Extensions;
 using Serilog;
-using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 Log.Logger = new LoggerConfiguration()
@@ -48,10 +47,8 @@ try
     var app = builder.Build();
 
     app.UseCorrelationId();
-    app.UseExceptionHandler();
-
     app.UseAsmaraRequestLogging();
-    //app.UseExceptionHandler();
+    app.UseExceptionHandler();
     app.UseAsmaraOpenApi();
     app.UseHttpsRedirection();
     app.UseCors();
