@@ -1,6 +1,8 @@
+using ASMARA.API.Common.ExceptionHandlers;
 using ASMARA.API.Extensions;
 using Serilog;
 using System.Security.Claims;
+using ASMARA.API.Common.ExceptionHandlers;
 using System.Text.Json.Serialization;
 
 Log.Logger = new LoggerConfiguration()
@@ -34,7 +36,17 @@ try
         });
     });
 
+    //Exceptions
+    builder.Services.AddProblemDetails();
+
+    builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+    builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+    //Middleware
     var app = builder.Build();
+
+    app.UseExceptionHandler();
 
     app.UseAsmaraRequestLogging();
     //app.UseExceptionHandler();
