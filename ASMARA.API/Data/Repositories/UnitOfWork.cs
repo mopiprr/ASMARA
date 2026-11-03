@@ -1,4 +1,6 @@
-﻿namespace ASMARA.API.Data.Repositories;
+﻿using Asmara.API.Data;
+
+namespace ASMARA.API.Data.Repositories;
 
 public class UnitOfWork(
     AsmaraDbContext context

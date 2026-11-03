@@ -8,7 +8,7 @@ public class LoggingBehavior<TRequest, TResponse>(ILoggerFactory loggerFactory) 
 {
     public const int SlowRequestThresholdMs = 500;
 
-    private readonly ILogger _logger = loggerFactory.CreateLogger("HRIS.API.Pipeline");
+    private readonly ILogger _logger = loggerFactory.CreateLogger("ASMARA.API.Pipeline");
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
