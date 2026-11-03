@@ -1,4 +1,5 @@
-﻿using ASMARA.API.Data;
+﻿using Asmara.API.Data;
+using ASMARA.API.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Extensions;

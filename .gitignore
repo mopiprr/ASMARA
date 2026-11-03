@@ -12,4 +12,5 @@
 *.suo
 
 Asmara.API/Logs/
+Asmara.API/appsettings.json
 Asmara.API/appsettings.Development.json
