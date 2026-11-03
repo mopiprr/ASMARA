@@ -2,8 +2,9 @@
 
 public enum AssetStatusEnum
 {
-    Archived = 1,
+    Available = 1,
     InUse = 2,
     UnderMaintenance = 3,
-    Disposed = 4
+    Disposed = 4,
+    Archived = 5
 }
