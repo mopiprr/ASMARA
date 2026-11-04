@@ -1,26 +1,45 @@
-﻿using ASMARA.API.Common.Exceptions;
+﻿
+using ASMARA.API.Common.Exceptions;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace ASMARA.API.Common.Security;
 
 public class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 {
-    private ClaimsPrincipal User => accessor.HttpContext?.User ?? new ClaimsPrincipal();
+    private ClaimsPrincipal User =>
+        accessor.HttpContext?.User ?? new ClaimsPrincipal();
 
-    public bool IsAuthenticated 
+    public bool IsAuthenticated
         => User.Identity?.IsAuthenticated == true;
 
-    public Guid EmployeeId 
-        => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
-        ? id
-        : throw new UnauthorizedException("No authenticated user in the current request.");
+    public Guid AccountId
+        => Guid.TryParse(
+            User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier),
+            out var id)
+            ? id
+            : throw new UnauthorizedException(
+                "No authenticated account in the current request.");
 
-    public string FullName 
-        => User.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
+    public Guid EmployeeId
+        => Guid.TryParse(
+            User.FindFirstValue("employee_id"),
+            out var id)
+            ? id
+            : throw new UnauthorizedException(
+                "No authenticated employee in the current request.");
 
-    public IReadOnlyCollection<string> Roles 
-        => User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+    public string FullName
+        => User.FindFirstValue("name")
+            ?? User.FindFirstValue(ClaimTypes.Name)
+            ?? string.Empty;
 
-    public bool IsInRole(string role) 
-        => User.IsInRole(role);
+    public IReadOnlyCollection<string> Roles
+        => User.FindAll("role")
+            .Select(c => c.Value)
+            .ToList();
+
+    public bool IsInRole(string role)
+        => Roles.Contains(role);
 }

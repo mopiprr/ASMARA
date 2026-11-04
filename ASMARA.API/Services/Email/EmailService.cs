@@ -2,7 +2,6 @@ using Microsoft.Extensions.Options;
 using MailKit.Net.Smtp;
 using MimeKit;
 using MailKit.Security;
-using Microsoft.Extensions.Options;
 
 namespace ASMARA.API.Services.Email;
 

@@ -1,6 +1,7 @@
-﻿using ASMARA.API.Data;
-using ASMARA.API.Entities;
+﻿
+using ASMARA.API.Data;
 using ASMARA.API.Common.Security;
+using AccountEntity = ASMARA.API.Entities.Account;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,12 +17,12 @@ public class LoginCommandHandler
     : IRequestHandler<LoginCommand, LoginResponse?>
 {
     private readonly AsmaraDbContext _context;
-    private readonly IPasswordHasher<Account> _passwordHasher;
+    private readonly IPasswordHasher<AccountEntity> _passwordHasher;
     private readonly JwtOptions _jwtOptions;
 
     public LoginCommandHandler(
         AsmaraDbContext context,
-        IPasswordHasher<Account> passwordHasher,
+        IPasswordHasher<AccountEntity> passwordHasher,
         IOptions<JwtOptions> jwtOptions)
     {
         _context = context;
@@ -55,6 +56,16 @@ public class LoginCommandHandler
 
         if (verificationResult == PasswordVerificationResult.Failed)
             return null;
+
+        // Rehash password if required
+        if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            account.PasswordHashed = _passwordHasher.HashPassword(
+                account,
+                request.Password);
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
 
         // Get active roles
         var roles = account.Roles

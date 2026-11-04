@@ -1,3 +1,4 @@
+
 using ASMARA.API.Common.ExceptionHandlers;
 using ASMARA.API.Data;
 using ASMARA.API.Extensions;
@@ -15,18 +16,33 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // Add services to the container.
+    // Serilog
     builder.AddAsmaraSerilog();
+
+    // Controllers
     builder.Services.AddControllers(options =>
     {
         options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
-    }).AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    })
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter());
+    });
 
+    // Application Services
     builder.Services.AddAsmaraServices(builder.Configuration);
+
+    // MediatR
     builder.Services.AddAsmaraMediator();
+
+    // Security (JWT & PasswordHasher)
     builder.Services.AddAsmaraSecurity(builder.Configuration);
+
+    // OpenAPI / Swagger
     builder.Services.AddAsmaraOpenApi();
 
+    // CORS
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(policy =>
@@ -34,21 +50,22 @@ try
             policy.AllowAnyHeader();
             policy.AllowAnyMethod();
             policy.AllowAnyOrigin();
+
             policy.WithExposedHeaders("X-Correlation-Id");
         });
     });
 
-    //Exceptions
+    // Exception Handling
     builder.Services.AddProblemDetails();
 
     builder.Services.AddExceptionHandler<DomainExceptionHandler>();
     builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-    //Middleware
+    // Build Application
     var app = builder.Build();
 
-
+    // Development Database Seeding
     if (app.Environment.IsDevelopment())
     {
         await using var scope = app.Services.CreateAsyncScope();
@@ -59,17 +76,30 @@ try
         await DevelopmentDataSeeder.SeedAsync(db);
     }
 
+    // Middleware Pipeline
     app.UseCorrelationId();
+
     app.UseAsmaraRequestLogging();
+
     app.UseExceptionHandler();
+
     app.UseAsmaraOpenApi();
+
     app.UseHttpsRedirection();
+
     app.UseCors();
+
+    // Authentication & Authorization
     app.UseAuthentication();
+
     app.UseUserLogContext();
+
     app.UseAuthorization();
+
+    // Map Endpoints
     app.MapControllers();
 
+    // Run Application
     await app.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)
@@ -79,6 +109,6 @@ catch (Exception ex) when (ex is not HostAbortedException)
 finally
 {
     Log.Information("ASMARA API stopped");
+
     Log.CloseAndFlush();
 }
-

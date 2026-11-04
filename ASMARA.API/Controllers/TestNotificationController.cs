@@ -9,6 +9,7 @@ namespace ASMARA.API.Controllers;
 [ApiController]
 [AllowAnonymous] // SEMENTARA
 [Route("api/test-notification")]
+
 public class TestNotificationController(IMediator mediator) : ControllerBase
 {
     // 1. Test Email: Pengajuan Tiket Pengadaan (Multi-Item)

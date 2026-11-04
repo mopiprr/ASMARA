@@ -28,7 +28,6 @@
     <Folder Include="Features\Catalog\" />
     <Folder Include="Features\PendingTasks\" />
     <Folder Include="Features\Procurement\" />
-    <Folder Include="Features\Tickets\" />
     <Folder Include="Models\" />
     <Folder Include="Middlewares\" />
     <Folder Include="Services\Email\" />
