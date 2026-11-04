@@ -1,4 +1,4 @@
-﻿using Asmara.API.Data;
+﻿using ASMARA.API.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Data.Repositories;

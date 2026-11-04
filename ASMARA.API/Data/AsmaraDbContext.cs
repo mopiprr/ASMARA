@@ -1,7 +1,7 @@
-﻿using Asmara.API.Entities;
+﻿using ASMARA.API.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Asmara.API.Data;
+namespace ASMARA.API.Data;
 
 public partial class AsmaraDbContext : DbContext
 {

@@ -1,4 +1,4 @@
-﻿namespace Asmara.API.Entities;
+﻿namespace ASMARA.API.Entities;
 
 public partial class ItemCategory
 {
