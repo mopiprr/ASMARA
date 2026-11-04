@@ -1,5 +1,5 @@
 ﻿using ASMARA.API.Common.Security;
-using Asmara.API.Entities;
+using ASMARA.API.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;

@@ -1,4 +1,4 @@
-using Asmara.API.Entities;
+using ASMARA.API.Entities;
 using MediatR;
 
 namespace ASMARA.API.Features.Ticket.Events;

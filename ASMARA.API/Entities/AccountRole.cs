@@ -1,4 +1,4 @@
-﻿using Asmara.API.Entities;
+﻿using ASMARA.API.Entities;
 
 namespace ASMARA.API.Entities;
 
