@@ -57,8 +57,9 @@ public class TicketNotificationHandler(
         }
         else if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
         {
-            var detail = notification.MaintenanceDetail ??
-                await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+            var detail = notification.MaintenanceDetail?.Asset != null
+                ? notification.MaintenanceDetail
+                : await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
 
             var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
             var problemDesc = detail?.Description ?? ticket.Description ?? "-";

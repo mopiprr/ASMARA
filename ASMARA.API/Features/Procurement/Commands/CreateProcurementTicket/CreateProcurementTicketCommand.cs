@@ -30,7 +30,6 @@ public class CreateProcurementTicketCommandHandler(
         var request = command.Request;
         var requesterId = currentUser.EmployeeId;
 
-        // List untuk menampung data item yang telah divalidasi dan dinormalisasi
         var validatedItems = new List<(int CategoryId, string ItemName, int Quantity, decimal Price, int? ItemId, string? ItemCode)>();
 
         foreach (var item in request.Items)
@@ -54,7 +53,6 @@ public class CreateProcurementTicketCommandHandler(
                     throw new BusinessRuleException($"Barang inventaris dengan ID {item.ItemId.Value} tidak ditemukan atau sudah tidak aktif.");
                 }
 
-                // Proteksi jika nama yang diinput berbeda dengan nama master inventaris
                 if (!string.IsNullOrWhiteSpace(item.ItemName) && 
                     !item.ItemName.Trim().Equals(inventoryItem.ItemName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -83,8 +81,7 @@ public class CreateProcurementTicketCommandHandler(
 
                 var trimmedName = item.ItemName.Trim();
 
-                // VALIDASI ANTI-DUPLIKASI:
-                // Cek apakah nama barang sudah ada di master ItemInventory
+                // Validate no duplicate
                 var duplicateInventory = await itemInventories.QueryNoTracking()
                     .FirstOrDefaultAsync(i => i.ItemName.ToLower() == trimmedName.ToLower(), ct);
 
@@ -117,13 +114,11 @@ public class CreateProcurementTicketCommandHandler(
             }
         }
 
-        // Eksekusi transaksi pembuatan tiket dan penomoran urut
         var (ticket, detailsList, flowResult) = await unitOfWork.ExecuteInTransactionAsync(async transactionCt =>
         {
-            // 2. Generate Nomor Tiket Urut Harian dari Repository (Format: PRC-ddMMyy-XXX, reset harian)
+            // Generate Nomor Tiket Urut Harian dari Repository (Format: PRC-ddMMyy-XXX, reset harian)
             var ticketNumber = await tickets.GenerateTicketNumberAsync(TicketTypeEnum.Procurement, transactionCt);
 
-            // 3. Buat Entitas Ticket & ProcurementDetails
             var now = DateTime.UtcNow;
             var newTicket = new Ticket
             {
@@ -156,7 +151,6 @@ public class CreateProcurementTicketCommandHandler(
 
             tickets.Add(newTicket);
 
-            // 4. Jalankan TicketFlow Engine (Action: Create -> UnderReview & catat riwayat ke TicketWorkflowLog)
             var logNote = !string.IsNullOrWhiteSpace(request.Description)
                 ? request.Description.Trim()
                 : $"Pengajuan pengadaan: {request.Subject.Trim()}";
