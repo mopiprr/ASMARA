@@ -38,6 +38,7 @@ public record CreateTicketDto(
         DateTime? ClosedAt,
         DateTime? UpdatedAt,
         Guid? CurrentTaskEmployeeId,
+        string CurrentStep,
         MaintenanceDetailResponseDto? MaintenanceDetail = null,
         List<ProcurementDetailResponseDto>? ProcurementDetails = null
         );
