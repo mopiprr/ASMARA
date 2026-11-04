@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Entities;
+using ASMARA.API.Entities;
 using MediatR;
 
 namespace ASMARA.API.Features.Tickets.Events;
@@ -13,12 +13,15 @@ public class TicketStatusChangedEvent : INotification
     public List<ProcurementDetail>? Items { get; }
     public MaintenanceDetail? Maintenance { get; }
 
+    public IEnumerable<ProcurementDetail>? ProcurementItems => Items;
+    public MaintenanceDetail? MaintenanceDetail => Maintenance;
+
     public TicketStatusChangedEvent(
         Ticket ticket,
         Employee requester,
         Employee actor,
         string action,
-        string? note,
+        string? note = null,
         List<ProcurementDetail>? items = null,
         MaintenanceDetail? maintenance = null)
     {

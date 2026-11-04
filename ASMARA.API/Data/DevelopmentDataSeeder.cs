@@ -1,4 +1,4 @@
-﻿
+
 using ASMARA.API.Entities;
 using ASMARA.API.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +17,7 @@ public static class DevelopmentDataSeeder
 
         if (employees.Count < 4)
         {
-            throw new InvalidOperationException(
-                "Minimal 4 data Employee diperlukan untuk development seed."
-            );
+            return;
         }
 
         // 1. Seed ItemCategory.

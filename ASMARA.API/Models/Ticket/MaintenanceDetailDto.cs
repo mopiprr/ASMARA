@@ -5,12 +5,12 @@ public class MaintenanceDetailDto
     
 }
 
-// public record CreateMaintenanceDetailDto(
-//     Guid TicketId,
-//     int AssetId,
-//     string Description,
-//     string? PartRequirement = null
-//     );
+public record CreateMaintenanceDetailDto(
+    Guid TicketId,
+    int AssetId,
+    string Description,
+    string? PartRequirement = null
+    );
     
 public record UpdateMaintenanceDetailDto(
     byte? RepairResult = null,

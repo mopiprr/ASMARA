@@ -1,8 +1,10 @@
-﻿using ASMARA.API.Common.Security;
+using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
-using ASMARA.API.Entities;            // samakan dengan namespace entity Anda setelah rename
+using ASMARA.API.Entities;
 using ASMARA.API.Enums;
+using ASMARA.API.Features.Tickets.Events;
 using ASMARA.API.Services.TicketFlow;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,10 +18,12 @@ namespace ASMARA.API.Controllers;
 public class DevTicketFlowController(
     IWebHostEnvironment env,
     ITicketRepository tickets,
+    IEmployeeRepository employees,
     ITicketWorkflowLogRepository logs,
     ITicketFlowService ticketFlow,
     IUnitOfWork unitOfWork,
-    ICurrentUser currentUser) : ControllerBase
+    ICurrentUser currentUser,
+    IMediator mediator) : ControllerBase
 {
     // 1. Buat tiket dummy atas nama user yang login, lalu jalankan aksi Create
     [HttpPost("{type}")]
@@ -42,11 +46,29 @@ public class DevTicketFlowController(
 
         var result = await ticketFlow.ExecuteAsync(ticket.Id, TicketActionEnum.Create, "Dummy create", ct);
         await unitOfWork.SaveChangesAsync(ct);
+
+        // Opsi 2: Kirim email setelah executeAsync dan SaveChangesAsync sukses
+        var requester = await employees.GetByIdAsync(ticket.EmployeeId, ct);
+        Employee? manager = null;
+        if (result.NextTaskEmployeeId.HasValue)
+        {
+            manager = await employees.GetByIdAsync(result.NextTaskEmployeeId.Value, ct);
+        }
+        else if (requester?.ManagerId is not null)
+        {
+            manager = await employees.GetByIdAsync(requester.ManagerId.Value, ct);
+        }
+
+        if (requester is not null)
+        {
+            await mediator.Publish(new TicketCreatedEvent(ticket, requester, manager), ct);
+        }
+
         return Ok(result);
     }
 
     [HttpPost("{ticketId:guid}/{ticketAction}")]
-    public async Task<IActionResult> Execute(Guid ticketId, TicketActionEnum ticketAction,[FromQuery] string? note, [FromQuery] Guid? assignTo, CancellationToken ct)
+    public async Task<IActionResult> Execute(Guid ticketId, TicketActionEnum ticketAction, [FromQuery] string? note, [FromQuery] Guid? assignTo, CancellationToken ct)
     {
         if (!env.IsDevelopment()) return NotFound();
 
@@ -59,6 +81,20 @@ public class DevTicketFlowController(
 
         var result = await ticketFlow.ExecuteAsync(ticketId, ticketAction, note, ct);
         await unitOfWork.SaveChangesAsync(ct);
+
+        // Opsi 2: Kirim email aksi setelah executeAsync dan SaveChangesAsync sukses
+        var updatedTicket = await tickets.GetByIdAsync(ticketId, ct);
+        if (updatedTicket is not null)
+        {
+            var requester = await employees.GetByIdAsync(updatedTicket.EmployeeId, ct);
+            var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct);
+            if (requester is not null && actor is not null)
+            {
+                await mediator.Publish(new TicketStatusChangedEvent(
+                    updatedTicket, requester, actor, ticketAction.ToString(), note), ct);
+            }
+        }
+
         return Ok(result);
     }
 

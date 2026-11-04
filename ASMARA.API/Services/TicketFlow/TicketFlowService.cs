@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Entities;
+using ASMARA.API.Entities;
 using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
