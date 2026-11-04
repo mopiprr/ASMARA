@@ -14,6 +14,21 @@ public record CreateTicketDto(
     Guid? AssignedToEmployeeId = null,
     string? AssignedTo = null
     );
+
+public record CreateTicketProcurementDto(
+    string Subject,
+    List<CreateProcurementItemDto> Items,
+    string? Description = null,
+    Guid? ParentTicketId = null
+);
+
+public record CreateProcurementItemDto(
+    int? ItemCategoryId = null,
+    string? ItemName = null,
+    int Quantity = 1,
+    decimal Price = 0,
+    int? ItemId = null
+);
     
     public record UpdateTicketDto(
         string Subject,
