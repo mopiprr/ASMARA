@@ -1,4 +1,4 @@
-﻿namespace Asmara.API.Features.Commands.Login;
+﻿namespace ASMARA.API.Features.Auth;
 
 public class LoginResponse
 {

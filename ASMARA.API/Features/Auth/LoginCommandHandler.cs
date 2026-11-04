@@ -1,37 +1,39 @@
-﻿
-using Asmara.API.Data;
+﻿using Asmara.API.Data;
 using Asmara.API.Entities;
+using ASMARA.API.Common.Security;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace Asmara.API.Features.Commands.Login;
+namespace ASMARA.API.Features.Auth;
 
 public class LoginCommandHandler
     : IRequestHandler<LoginCommand, LoginResponse?>
 {
     private readonly AsmaraDbContext _context;
     private readonly IPasswordHasher<Account> _passwordHasher;
-    private readonly IConfiguration _configuration;
+    private readonly JwtOptions _jwtOptions;
 
     public LoginCommandHandler(
         AsmaraDbContext context,
         IPasswordHasher<Account> passwordHasher,
-        IConfiguration configuration)
+        IOptions<JwtOptions> jwtOptions)
     {
         _context = context;
         _passwordHasher = passwordHasher;
-        _configuration = configuration;
+        _jwtOptions = jwtOptions.Value;
     }
 
     public async Task<LoginResponse?> Handle(
         LoginCommand request,
         CancellationToken cancellationToken)
     {
+        // Find account
         var email = request.Email.Trim();
 
         var account = await _context.Accounts
@@ -44,6 +46,7 @@ public class LoginCommandHandler
         if (account is null || !account.IsActive)
             return null;
 
+        // Verify password
         var verificationResult =
             _passwordHasher.VerifyHashedPassword(
                 account,
@@ -53,6 +56,7 @@ public class LoginCommandHandler
         if (verificationResult == PasswordVerificationResult.Failed)
             return null;
 
+        // Get active roles
         var roles = account.Roles
             .Where(role => role.IsActive)
             .Select(role => new UserRoleInfo
@@ -66,35 +70,37 @@ public class LoginCommandHandler
         if (roles.Count == 0)
             return null;
 
-        var secretKey = _configuration["Jwt:SecretKey"]
-            ?? throw new InvalidOperationException(
-                "JWT SecretKey belum dikonfigurasi.");
+        // Validate JWT configuration
+        if (string.IsNullOrWhiteSpace(_jwtOptions.Key))
+            throw new InvalidOperationException(
+                "JWT Key belum dikonfigurasi.");
 
-        var issuer = _configuration["Jwt:Issuer"]
-            ?? throw new InvalidOperationException(
+        if (string.IsNullOrWhiteSpace(_jwtOptions.Issuer))
+            throw new InvalidOperationException(
                 "JWT Issuer belum dikonfigurasi.");
 
-        var audience = _configuration["Jwt:Audience"]
-            ?? throw new InvalidOperationException(
+        if (string.IsNullOrWhiteSpace(_jwtOptions.Audience))
+            throw new InvalidOperationException(
                 "JWT Audience belum dikonfigurasi.");
 
-        var expiresMinutes =
-            _configuration.GetValue<int>("Jwt:ExpiresMinutes");
-
-        if (expiresMinutes <= 0)
+        if (_jwtOptions.ExpiresMinutes <= 0)
             throw new InvalidOperationException(
                 "JWT ExpiresMinutes harus lebih dari 0.");
 
+        // Generate JWT
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(secretKey));
+            Encoding.UTF8.GetBytes(_jwtOptions.Key));
 
         var credentials = new SigningCredentials(
             key,
             SecurityAlgorithms.HmacSha256);
 
         var now = DateTime.UtcNow;
-        var expiresAt = now.AddMinutes(expiresMinutes);
 
+        var expiresAt = now.AddMinutes(
+            _jwtOptions.ExpiresMinutes);
+
+        // Claims
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, account.Id.ToString()),
@@ -109,9 +115,10 @@ public class LoginCommandHandler
             claims.Add(new Claim("role", role.RoleCode));
         }
 
+        // Create token
         var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
             claims: claims,
             notBefore: now,
             expires: expiresAt,
@@ -120,10 +127,12 @@ public class LoginCommandHandler
         var accessToken =
             new JwtSecurityTokenHandler().WriteToken(token);
 
+        // Return login response
         return new LoginResponse
         {
             AccessToken = accessToken,
             ExpiresAt = expiresAt,
+
             User = new LoginUserInfo
             {
                 AccountId = account.Id,

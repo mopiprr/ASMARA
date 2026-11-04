@@ -1,6 +1,6 @@
 ﻿using MediatR;
 
-namespace Asmara.API.Features.Commands.Login;
+namespace ASMARA.API.Features.Auth;
 
 public class LoginCommand : IRequest<LoginResponse?>
 {

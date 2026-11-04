@@ -1,5 +1,4 @@
-﻿
-using ASMARA.API.Common.Security;
+﻿using ASMARA.API.Common.Security;
 using Asmara.API.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -18,20 +17,32 @@ public static class SecurityExtensions
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .Validate(
-                o => !string.IsNullOrWhiteSpace(o.Key) && o.Key.Length >= 32,
-                "Jwt:Key must be at least 32 characters (set it in User Secrets).")
+                o => !string.IsNullOrWhiteSpace(o.Key)
+                     && Encoding.UTF8.GetByteCount(o.Key) >= 32,
+                "Jwt:Key must be at least 32 bytes.")
+            .Validate(
+                o => !string.IsNullOrWhiteSpace(o.Issuer),
+                "Jwt:Issuer belum dikonfigurasi.")
+            .Validate(
+                o => !string.IsNullOrWhiteSpace(o.Audience),
+                "Jwt:Audience belum dikonfigurasi.")
+            .Validate(
+                o => o.ExpiresMinutes > 0,
+                "Jwt:ExpiresMinutes harus lebih dari 0.")
             .ValidateOnStart();
 
+        // Get JWT configuration
         var jwt = configuration
             .GetSection(JwtOptions.SectionName)
             .Get<JwtOptions>()
             ?? throw new InvalidOperationException(
                 "JWT configuration tidak ditemukan.");
 
-        if (string.IsNullOrWhiteSpace(jwt.Key) || jwt.Key.Length < 32)
+        if (string.IsNullOrWhiteSpace(jwt.Key)
+            || Encoding.UTF8.GetByteCount(jwt.Key) < 32)
         {
             throw new InvalidOperationException(
-                "Jwt:Key belum dikonfigurasi atau panjangnya kurang dari 32 karakter.");
+                "Jwt:Key belum dikonfigurasi atau panjangnya kurang dari 32 bytes.");
         }
 
         // JWT Signing Key

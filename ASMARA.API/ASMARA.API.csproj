@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Auth\" />
+    <Folder Include="Features\Commands\Login\" />
     <Folder Include="Features\Maintenance\" />
     <Folder Include="Features\Dashboard\" />
     <Folder Include="Features\Catalog\" />

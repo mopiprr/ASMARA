@@ -1,4 +1,4 @@
-﻿using Asmara.API.Features.Commands.Login;
+﻿using ASMARA.API.Features.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

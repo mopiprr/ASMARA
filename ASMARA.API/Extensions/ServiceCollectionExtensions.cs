@@ -1,5 +1,5 @@
-﻿using Asmara.API.Data;
-using ASMARA.API.Data;
+﻿
+using Asmara.API.Data;
 using ASMARA.API.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +12,13 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         var connectionString =
-            configuration.GetConnectionString("AsmaraDB");
+            configuration.GetConnectionString("AsmaraDB")
+            ?? throw new InvalidOperationException(
+                "Connection string 'AsmaraDB' tidak ditemukan.");
+
+        // Database
+        services.AddDbContext<AsmaraDbContext>(options =>
+            options.UseSqlServer(connectionString));
 
         #region Services
         #endregion
