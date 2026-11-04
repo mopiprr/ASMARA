@@ -26,3 +26,10 @@ public record CreateAssetDto(
         string AssetTag,
         byte Status
     );
+
+public record MaintenanceAssetOptionDto(
+    int AssetId,
+    string AssetTag,
+    string ItemName,
+    string CategoryName,
+    bool IsShared);
