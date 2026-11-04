@@ -1,4 +1,5 @@
 using ASMARA.API.Common.Exceptions;
+using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Entities;
 using ASMARA.API.Enums;
@@ -10,10 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
 
-public record CreateProcurementTicketCommand(
-    Guid EmployeeId,
-    CreateTicketProcurementDto Request
-) : IRequest<TicketResponseDto>;
+public record CreateProcurementTicketCommand(CreateTicketProcurementDto Request) : IRequest<Guid>;
 
 public class CreateProcurementTicketCommandHandler(
     ITicketRepository tickets,
@@ -23,23 +21,14 @@ public class CreateProcurementTicketCommandHandler(
     IItemInventoryRepository itemInventories,
     ITicketFlowService ticketFlow,
     IUnitOfWork unitOfWork,
+    ICurrentUser currentUser,
     IMediator mediator,
-    ILogger<CreateProcurementTicketCommandHandler> logger) : IRequestHandler<CreateProcurementTicketCommand, TicketResponseDto>
+    ILogger<CreateProcurementTicketCommandHandler> logger) : IRequestHandler<CreateProcurementTicketCommand, Guid>
 {
-    public async Task<TicketResponseDto> Handle(CreateProcurementTicketCommand command, CancellationToken ct)
+    public async Task<Guid> Handle(CreateProcurementTicketCommand command, CancellationToken ct)
     {
         var request = command.Request;
-
-        // 1. Validasi Subject & Items Dasar
-        if (string.IsNullOrWhiteSpace(request.Subject))
-        {
-            throw new BusinessRuleException("Judul pengajuan (Subject) wajib diisi.");
-        }
-
-        if (request.Items is null || request.Items.Count == 0)
-        {
-            throw new BusinessRuleException("Daftar barang pengadaan minimal harus memiliki 1 item.");
-        }
+        var requesterId = currentUser.EmployeeId;
 
         // List untuk menampung data item yang telah divalidasi dan dinormalisasi
         var validatedItems = new List<(int CategoryId, string ItemName, int Quantity, decimal Price, int? ItemId, string? ItemCode)>();
@@ -128,59 +117,61 @@ public class CreateProcurementTicketCommandHandler(
             }
         }
 
-        // 2. Generate Nomor Tiket Unik (Format: PRC-yyMMdd-XXXX, max 20 karakter)
-        var now = DateTime.UtcNow;
-        string ticketNumber;
-        do
+        // Eksekusi transaksi pembuatan tiket dan penomoran urut
+        var (ticket, detailsList, flowResult) = await unitOfWork.ExecuteInTransactionAsync(async transactionCt =>
         {
-            ticketNumber = $"PRC-{now:yyMMdd}-{Random.Shared.Next(1000, 9999)}";
-        } while (await tickets.QueryNoTracking().AnyAsync(t => t.TicketNumber == ticketNumber, ct));
+            // 2. Generate Nomor Tiket Urut Harian dari Repository (Format: PRC-ddMMyy-XXX, reset harian)
+            var ticketNumber = await tickets.GenerateTicketNumberAsync(TicketTypeEnum.Procurement, transactionCt);
 
-        // 3. Buat Entitas Ticket & ProcurementDetails
-        var ticket = new Ticket
-        {
-            Id = Guid.CreateVersion7(),
-            EmployeeId = command.EmployeeId,
-            TicketNumber = ticketNumber,
-            TicketType = (byte)TicketTypeEnum.Procurement,
-            Subject = request.Subject.Trim(),
-            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-            ParentTicketId = request.ParentTicketId,
-            CreatedAt = now
-        };
-
-        var detailsList = new List<ProcurementDetail>();
-        foreach (var v in validatedItems)
-        {
-            var detail = new ProcurementDetail
+            // 3. Buat Entitas Ticket & ProcurementDetails
+            var now = DateTime.UtcNow;
+            var newTicket = new Ticket
             {
-                TicketId = ticket.Id,
-                ItemCategoryId = v.CategoryId,
-                ItemName = v.ItemName,
-                Quantity = v.Quantity,
-                Price = v.Price,
-                ItemId = v.ItemId,
+                Id = Guid.CreateVersion7(),
+                EmployeeId = requesterId,
+                TicketNumber = ticketNumber,
+                TicketType = (byte)TicketTypeEnum.Procurement,
+                Subject = request.Subject.Trim(),
+                Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+                ParentTicketId = request.ParentTicketId,
                 CreatedAt = now
             };
-            procurementDetails.Add(detail);
-            detailsList.Add(detail);
-        }
 
-        tickets.Add(ticket);
+            var details = new List<ProcurementDetail>();
+            foreach (var v in validatedItems)
+            {
+                var detail = new ProcurementDetail
+                {
+                    TicketId = newTicket.Id,
+                    ItemCategoryId = v.CategoryId,
+                    ItemName = v.ItemName,
+                    Quantity = v.Quantity,
+                    Price = v.Price,
+                    ItemId = v.ItemId,
+                    CreatedAt = now
+                };
+                procurementDetails.Add(detail);
+                details.Add(detail);
+            }
 
-        // 4. Jalankan TicketFlow Engine (Action: Create -> UnderReview & catat riwayat ke TicketWorkflowLog)
-        var logNote = !string.IsNullOrWhiteSpace(request.Description)
-            ? request.Description.Trim()
-            : $"Pengajuan pengadaan: {request.Subject.Trim()}";
+            tickets.Add(newTicket);
 
-        var flowResult = await ticketFlow.ExecuteAsync(
-            ticket.Id,
-            TicketActionEnum.Create,
-            logNote,
-            ct);
+            // 4. Jalankan TicketFlow Engine (Action: Create -> UnderReview & catat riwayat ke TicketWorkflowLog)
+            var logNote = !string.IsNullOrWhiteSpace(request.Description)
+                ? request.Description.Trim()
+                : $"Pengajuan pengadaan: {request.Subject.Trim()}";
 
-        // 5. Simpan Perubahan ke Database
-        await unitOfWork.SaveChangesAsync(ct);
+            var result = await ticketFlow.ExecuteAsync(
+                newTicket.Id,
+                TicketActionEnum.Create,
+                logNote,
+                transactionCt);
+
+            // 5. Simpan Perubahan ke Database
+            await unitOfWork.SaveChangesAsync(transactionCt);
+
+            return (newTicket, details, result);
+        }, ct);
 
         // 6. Opsi 2: Kirim Notifikasi Email setelah simpan DB sukses
         var requester = await employees.GetByIdAsync(ticket.EmployeeId, ct);
@@ -199,53 +190,11 @@ public class CreateProcurementTicketCommandHandler(
             await mediator.Publish(new TicketCreatedEvent(ticket, requester, manager, detailsList), ct);
         }
 
-        // Catat ke Application Log (Serilog Console & File)
+        // Catat ke Log
         logger.LogInformation(
             "[Procurement] Tiket {TicketNumber} (ID: {TicketId}) berhasil dibuat oleh {EmployeeName} ({EmployeeId}) dengan {ItemCount} item. Status: {FromStep} -> {ToStep}. Ditugaskan ke: {NextTaskEmployeeId}",
             ticket.TicketNumber, ticket.Id, requester?.FullName ?? "Unknown", ticket.EmployeeId, detailsList.Count, flowResult.FromStep, flowResult.ToStep, flowResult.NextTaskEmployeeId);
-
-        // 7. Siapkan Response DTO
-        var categoryIds = detailsList.Select(d => d.ItemCategoryId).Distinct().ToList();
-        var categoriesMap = await itemCategories.QueryNoTracking()
-            .Where(c => categoryIds.Contains(c.Id))
-            .ToDictionaryAsync(c => c.Id, c => c.CategoryName, ct);
-
-        var itemCodesMap = validatedItems
-            .Where(v => v.ItemId.HasValue && v.ItemCode is not null)
-            .GroupBy(v => v.ItemId!.Value)
-            .ToDictionary(g => g.Key, g => g.First().ItemCode);
-
-        var detailDtos = detailsList.Select(d => new ProcurementDetailResponseDto(
-            TicketId: d.TicketId,
-            ItemId: d.ItemId,
-            ItemCode: d.ItemId.HasValue ? itemCodesMap.GetValueOrDefault(d.ItemId.Value) : null,
-            ItemCategoryId: d.ItemCategoryId,
-            CategoryName: categoriesMap.GetValueOrDefault(d.ItemCategoryId, "Unknown"),
-            ItemName: d.ItemName,
-            Quantity: d.Quantity,
-            Price: d.Price,
-            TotalPrice: d.Quantity * d.Price,
-            CreatedAt: d.CreatedAt
-        )).ToList();
-
-        return new TicketResponseDto(
-            Id: ticket.Id,
-            ParentTicketId: ticket.ParentTicketId,
-            EmployeeId: ticket.EmployeeId,
-            EmployeeName: requester?.FullName,
-            TicketNumber: ticket.TicketNumber,
-            TicketType: ticket.TicketType,
-            Subject: ticket.Subject,
-            Description: ticket.Description,
-            AssignedToEmployeeId: ticket.AssignedToEmployeeId,
-            AssignedTo: ticket.AssignedTo,
-            CreatedAt: ticket.CreatedAt,
-            ClosedAt: ticket.ClosedAt,
-            UpdatedAt: ticket.UpdatedAt,
-            CurrentTaskEmployeeId: ticket.CurrentTaskEmployeeId,
-            CurrentStep: flowResult.ToStep,
-            MaintenanceDetail: null,
-            ProcurementDetails: detailDtos
-        );
+        
+        return ticket.Id;
     }
 }
