@@ -57,3 +57,11 @@ public record CreateProcurementItemDto(
         MaintenanceDetailResponseDto? MaintenanceDetail = null,
         List<ProcurementDetailResponseDto>? ProcurementDetails = null
         );
+
+public record TicketListItemDto(
+    Guid Id,
+    string TicketNumber,
+    string Subject,
+    DateTime CreatedAt,
+    string CurrentStep,
+    string CurrentStepName);

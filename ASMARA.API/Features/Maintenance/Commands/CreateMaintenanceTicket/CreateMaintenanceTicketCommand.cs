@@ -51,6 +51,8 @@ public class CreateMaintenanceTicketCommandHandler(IUnitOfWork uow, ITicketRepos
 
             await uow.SaveChangesAsync(ct);
 
+
+
             return ticket.Id;
         }, ct);
 }
