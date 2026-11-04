@@ -7,6 +7,7 @@ public class DashboardSummaryResponse
     public AssetStatisticsResponse Statistics { get; set; } = new();
 
     public List<RecentAssetResponse> RecentAssets { get; set; } = new();
+    public List<RecentTicketResponse> RecentTickets { get; set; } = [];
 }
 
 public class UserProfileResponse

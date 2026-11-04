@@ -73,7 +73,21 @@ try
         var db = scope.ServiceProvider
             .GetRequiredService<AsmaraDbContext>();
 
+        // Check database connection
+        var canConnect = await db.Database.CanConnectAsync();
+
+        if (!canConnect)
+        {
+            throw new InvalidOperationException(
+                "Unable to connect to ASMARA database.");
+        }
+
+        Log.Information("ASMARA database connection successful.");
+
+        // Seed development data
         await DevelopmentDataSeeder.SeedAsync(db);
+
+        Log.Information("Development data seeding completed.");
     }
 
     // Middleware Pipeline
