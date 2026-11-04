@@ -1,5 +1,5 @@
-using ASMARA.API.Common.Security;
 using ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
+using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -8,17 +8,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace ASMARA.API.Controllers;
 
 [ApiController]
-[Route("api/procurement")]
+[Route("api/procurements")]
 [Authorize]
-public class ProcurementsController(IMediator mediator, ICurrentUser currentUser) : ControllerBase
+public class ProcurementsController(ISender sender) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Create(
+    public async Task<ActionResult<TicketResponseDto>> Create(
         [FromBody] CreateTicketProcurementDto request,
         CancellationToken ct)
     {
-        var command = new CreateProcurementTicketCommand(currentUser.EmployeeId, request);
-        var result = await mediator.Send(command, ct);
-        return StatusCode(StatusCodes.Status201Created, result);
+        var id = await sender.Send(new CreateProcurementTicketCommand(request), ct);
+        var ticket = await sender.Send(new GetTicketByIdQuery(id), ct);
+
+        return CreatedAtAction(nameof(TicketsController.GetById), "Tickets", new { id }, ticket);
     }
 }
