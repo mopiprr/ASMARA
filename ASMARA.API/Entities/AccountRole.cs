@@ -1,6 +1,4 @@
-﻿using ASMARA.API.Entities;
-
-namespace ASMARA.API.Entities;
+﻿namespace ASMARA.API.Entities;
 
 public class AccountRole
 {
