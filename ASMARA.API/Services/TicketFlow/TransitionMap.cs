@@ -65,9 +65,9 @@ public static class TransitionMap
         Add(maint, RequesterSendItem, TicketActionEnum.Send, HandlerReceiveItem);
         Add(maint, HandlerReceiveItem, TicketActionEnum.Receive, RepairInProgress);
 
-        Add(maint, RepairInProgress, TicketActionEnum.Repaired, ItSupportResultReview);
+        Add(maint, RepairInProgress, TicketActionEnum.Repaired, HandlerReturnItem);
         Add(maint, RepairInProgress, TicketActionEnum.NeedPart, InventoryPartCheck);
-        Add(maint, RepairInProgress, TicketActionEnum.Unrepairable, ItSupportDisposeReview);
+        Add(maint, RepairInProgress, TicketActionEnum.Unrepairable, DivisionManagerReview);
 
         Add(maint, InventoryPartCheck, TicketActionEnum.PartAvailable, HandlerReceivePart);
         Add(maint, InventoryPartCheck, TicketActionEnum.PartUnavailable, HandlerOrderPart);
@@ -75,10 +75,8 @@ public static class TransitionMap
         Add(maint, HandlerOrderPart, TicketActionEnum.OrderPart, WaitingForPart);
         Add(maint, WaitingForPart, TicketActionEnum.ChildCompleted, RepairInProgress);
 
-        Add(maint, ItSupportResultReview, TicketActionEnum.Acknowledge, HandlerReturnItem);
         Add(maint, HandlerReturnItem, TicketActionEnum.Send, RequesterReceiveItem);
 
-        Add(maint, ItSupportDisposeReview, TicketActionEnum.Acknowledge, DivisionManagerReview);
         Add(maint, DivisionManagerReview, TicketActionEnum.Dispose, InventoryDispose);
         Add(maint, DivisionManagerReview, TicketActionEnum.Archive, InventoryArchive);
 
@@ -90,7 +88,8 @@ public static class TransitionMap
         Add(maint, WaitingForReplacement, TicketActionEnum.ChildCompleted, InventorySendReplacement);
         Add(maint, InventorySendReplacement, TicketActionEnum.Send, RequesterReceiveItem);
 
-        Add(maint, RequesterReceiveItem, TicketActionEnum.Receive, Completed);
+        Add(maint, RequesterReceiveItem, TicketActionEnum.Receive, RequesterClose);
+        Add(maint, RequesterClose, TicketActionEnum.Close, Completed);
 
         return map;
     }

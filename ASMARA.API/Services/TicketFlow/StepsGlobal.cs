@@ -18,15 +18,14 @@ public static class StepCodes
     public const string HandlerReceivePart = "HANDLER_RECEIVE_PART";
     public const string HandlerOrderPart = "HANDLER_ORDER_PART";
     public const string WaitingForPart = "WAITING_FOR_PART";
-    public const string ItSupportResultReview = "IT_SUPPORT_RESULT_REVIEW";
     public const string HandlerReturnItem = "HANDLER_RETURN_ITEM";
-    public const string ItSupportDisposeReview = "IT_SUPPORT_DISPOSE_REVIEW";
     public const string DivisionManagerReview = "DIVISION_MANAGER_REVIEW";
     public const string InventoryDispose = "INVENTORY_DISPOSE";
     public const string InventoryArchive = "INVENTORY_ARCHIVE";
     public const string WaitingForReplacement = "WAITING_FOR_REPLACEMENT";
     public const string InventorySendReplacement = "INVENTORY_SEND_REPLACEMENT";
     public const string RequesterReceiveItem = "REQUESTER_RECEIVE_ITEM";
+    public const string RequesterClose = "REQUESTER_CLOSE";
 }
 
 public static class StepLevels
