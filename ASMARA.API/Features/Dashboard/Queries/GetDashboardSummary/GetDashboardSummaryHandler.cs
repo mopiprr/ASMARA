@@ -1,4 +1,5 @@
-﻿using ASMARA.API.Data;
+﻿
+using ASMARA.API.Data;
 using ASMARA.API.Enums;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
@@ -72,6 +73,36 @@ public class GetDashboardSummaryHandler
             })
             .ToListAsync(cancellationToken);
 
+        // Mengambil lima tiket terbaru milik employee yang sedang login.
+        var ticketData = await _context.Tickets
+            .AsNoTracking()
+            .Where(x => x.EmployeeId == request.EmployeeId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(5)
+            .Select(x => new
+            {
+                x.Id,
+                x.TicketNumber,
+                x.Subject,
+                x.TicketType,
+                x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var recentTickets = ticketData
+            .Select(x => new RecentTicketResponse
+            {
+                Id = x.Id,
+                TicketNumber = x.TicketNumber,
+                Subject = x.Subject,
+                TicketType = Enum.GetName(
+                    typeof(TicketTypeEnum),
+                    Enum.ToObject(typeof(TicketTypeEnum), x.TicketType)
+                ) ?? "Unknown",
+                CreatedAt = x.CreatedAt
+            })
+            .ToList();
+
         return new DashboardSummaryResponse
         {
             Profile = new UserProfileResponse
@@ -84,7 +115,8 @@ public class GetDashboardSummaryHandler
             },
 
             Statistics = statistics,
-            RecentAssets = recentAssets
+            RecentAssets = recentAssets,
+            RecentTickets = recentTickets
         };
     }
 }
