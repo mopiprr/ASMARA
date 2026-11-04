@@ -1,5 +1,7 @@
 using ASMARA.API.Common.ExceptionHandlers;
+using ASMARA.API.Data;
 using ASMARA.API.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Text.Json.Serialization;
 
@@ -45,6 +47,17 @@ try
 
     //Middleware
     var app = builder.Build();
+
+
+    if (app.Environment.IsDevelopment())
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+
+        var db = scope.ServiceProvider
+            .GetRequiredService<AsmaraDbContext>();
+
+        await DevelopmentDataSeeder.SeedAsync(db);
+    }
 
     app.UseCorrelationId();
     app.UseAsmaraRequestLogging();

@@ -1,5 +1,6 @@
 ﻿using ASMARA.API.Data;
 using ASMARA.API.Data.Repositories;
+using ASMARA.API.Services.Email;
 using ASMARA.API.Services.TicketFlow;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +24,11 @@ public static class ServiceCollectionExtensions
         #region Services
         services.AddScoped<IApproverResolver, ApproverResolver>();
         services.AddScoped<ITicketFlowService, TicketFlowService>();
+        #endregion
+        
+        #region Services
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.AddScoped<IEmailService, EmailService>();
         #endregion
 
         #region Repositories

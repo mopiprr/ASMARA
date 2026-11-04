@@ -24,9 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Commands\Login\" />
     <Folder Include="Features\Maintenance\" />
-    <Folder Include="Features\Dashboard\" />
     <Folder Include="Features\Catalog\" />
     <Folder Include="Features\PendingTasks\" />
     <Folder Include="Features\Procurement\" />
