@@ -15,20 +15,20 @@ public record CreateTicketDto(
     string? AssignedTo = null
     );
 
-public record CreateTicketProcurementDto(
-    string Subject,
-    List<CreateProcurementItemDto> Items,
-    string? Description = null,
-    Guid? ParentTicketId = null
-);
+// public record CreateTicketProcurementDto(
+//     string Subject,
+//     List<CreateProcurementItemDto> Items,
+//     string? Description = null,
+//     Guid? ParentTicketId = null
+// );
 
-public record CreateProcurementItemDto(
-    int? ItemCategoryId = null,
-    string? ItemName = null,
-    int Quantity = 1,
-    decimal Price = 0,
-    int? ItemId = null
-);
+// public record CreateProcurementItemDto(
+//     int? ItemCategoryId = null,
+//     string? ItemName = null,
+//     int Quantity = 1,
+//     decimal Price = 0,
+//     int? ItemId = null
+// );
     
     public record UpdateTicketDto(
         string Subject,
@@ -57,3 +57,23 @@ public record CreateProcurementItemDto(
         MaintenanceDetailResponseDto? MaintenanceDetail = null,
         List<ProcurementDetailResponseDto>? ProcurementDetails = null
         );
+
+public record TicketListItemDto(
+    Guid Id,
+    string TicketNumber,
+    string Subject,
+    DateTime CreatedAt,
+    string CurrentStep,
+    string CurrentStepName);
+
+public record PendingTicketListItemDto(
+    Guid Id,
+    string TicketNumber,
+    byte TicketType,
+    string TicketTypeName,
+    string Subject,
+    Guid RequesterId,
+    string RequesterName,
+    DateTime CreatedAt,
+    string CurrentStep,
+    string CurrentStepName);

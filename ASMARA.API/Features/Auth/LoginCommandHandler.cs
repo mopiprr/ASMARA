@@ -35,14 +35,12 @@ public class LoginCommandHandler
         CancellationToken cancellationToken)
     {
         // Find account
-        var email = request.Email.Trim();
+        var userName = request.UserName.Trim();
 
         var account = await _context.Accounts
             .Include(a => a.Employee)
             .Include(a => a.Roles)
-            .FirstOrDefaultAsync(
-                a => a.Employee.Email == email,
-                cancellationToken);
+            .FirstOrDefaultAsync(a => a.UserName == userName, cancellationToken);
 
         if (account is null || !account.IsActive)
             return null;

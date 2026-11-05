@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Entities;
+using ASMARA.API.Entities;
 using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Data.Repositories;
 
@@ -39,8 +39,15 @@ public class ApproverResolver(IEmployeeRepository employees) : IApproverResolver
         {
             var managerId = await employees.GetManagerIdAsync(current, ct);
 
+            // if (managerId is null)
+            //     throw new BusinessRuleException($"Approval chain is incomplete: no active manager at hop {i}.");
             if (managerId is null)
+            {
+                if (i > 1)
+                    return current;
+
                 throw new BusinessRuleException($"Approval chain is incomplete: no active manager at hop {i}.");
+            }
 
             current = managerId.Value;
         }

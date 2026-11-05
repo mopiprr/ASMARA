@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Email atau password tidak valid."
+                message = "Invalid email or password."
             });
         }
 

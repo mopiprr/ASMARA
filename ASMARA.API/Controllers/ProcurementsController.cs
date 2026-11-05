@@ -26,7 +26,8 @@ public class ProcurementsController(ISender sender) : ControllerBase
 
     [HttpPost]
     public async Task<ActionResult<TicketResponseDto>> Create(
-        [FromBody] CreateTicketProcurementDto request,
+        // [FromBody] CreateTicketProcurementDto request,
+        [FromBody] CreateProcurementTicketRequestDto request,
         CancellationToken ct)
     {
         var id = await sender.Send(

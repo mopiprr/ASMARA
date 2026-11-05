@@ -1,4 +1,7 @@
-﻿using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
+using ASMARA.API.Common.Paging;
+using ASMARA.API.Features.Tickets.Queries.GetAllMyTicketsQuery;
+using ASMARA.API.Features.Tickets.Queries.GetPendingTickets;
+using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -14,4 +17,13 @@ public class TicketsController(ISender sender) : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TicketResponseDto>> GetById(Guid id, CancellationToken ct)
         => Ok(await sender.Send(new GetTicketByIdQuery(id), ct));
+
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<TicketListItemDto>>> GetMyTickets([FromQuery] GetAllMyTicketsQuery query, CancellationToken ct)
+       => Ok(await sender.Send(query, ct));
+
+    [HttpGet("pending")]
+    public async Task<ActionResult<PagedResult<PendingTicketListItemDto>>> GetPendingTickets([FromQuery] GetPendingTicketsQuery query, CancellationToken ct)
+       => Ok(await sender.Send(query, ct));
+
 }

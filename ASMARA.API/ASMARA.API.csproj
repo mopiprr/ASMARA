@@ -24,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\Maintenance\Commands\ApproveMaintenanceTicket\" />
+    <Folder Include="Features\Maintenance\Commands\RejectMaintenanceTicket\" />
+    <Folder Include="Features\Procurement\" />
     <Folder Include="Features\PendingTasks\" />
     <Folder Include="Middlewares\" />
     <Folder Include="Services\Email\" />

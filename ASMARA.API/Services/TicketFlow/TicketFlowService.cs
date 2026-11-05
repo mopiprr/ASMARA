@@ -56,9 +56,10 @@ public class TicketFlowService
 
         if (action == TicketActionEnum.Create)
         {
-            var requiredHops = type == TicketTypeEnum.Maintenance
-                ? StepLevels.DivisionManager  
-                : StepLevels.DepartmentManager;  
+            // var requiredHops = type == TicketTypeEnum.Maintenance
+            //     ? StepLevels.DivisionManager  
+            //     : StepLevels.DepartmentManager;  
+            var requiredHops = StepLevels.DepartmentManager;  
 
             await approverResolver.ResolveAsync(ticket, requiredHops, ct);
         }
