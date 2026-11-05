@@ -1,3 +1,4 @@
+
 using ASMARA.API.Entities;
 using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Common.Security;
@@ -32,13 +33,13 @@ public class ApproverResolver(
             return ticket.AssignedToEmployeeId;
         }
 
-        // Role-based approval:
         // Finance, Purchasing, Inventory, IT Support.
+        // Role-based approval tidak menggunakan satu EmployeeId.
         if (LevelRoleMap.IsRoleLevel(level.Value))
             return null;
 
         // Procurement Department Approval:
-        // Direct Manager requester.
+        // Menggunakan direct manager requester.
         if ((TicketTypeEnum)ticket.TicketType ==
                 TicketTypeEnum.Procurement &&
             level == StepLevels.DepartmentManager)
@@ -48,7 +49,7 @@ public class ApproverResolver(
                 ct);
         }
 
-        // Other workflows use manager hierarchy.
+        // Workflow lain menggunakan manager hierarchy.
         if (level is >= StepLevels.DirectManager
             and <= StepLevels.DivisionManager)
         {
@@ -79,23 +80,6 @@ public class ApproverResolver(
         return managerId;
     }
 
-    // private async Task<Guid?> WalkManagerChainAsync(Guid startEmployeeId, int hops, CancellationToken ct)
-    // {
-    //     var current = startEmployeeId;
-    //     for (var i = 1; i <= hops; i++)
-    //     {
-    //         var managerId = await employees.GetManagerIdAsync(current, ct);
-    //         if (managerId is null)
-    //         {
-    //             if (i > 1) return current;
-    //             throw new BusinessRuleException($"Approval chain is incomplete: no active manager at hop {i}.");
-    //         }
-    //         current = managerId.Value;
-    //     }
-    //     return current;
-    // }
-
-    private async Task<Guid?> WalkManagerChainAsync(Guid startEmployeeId, int targetLevel, CancellationToken ct)
     private async Task<Guid?> WalkManagerChainAsync(
         Guid startEmployeeId,
         int hops,
@@ -104,49 +88,25 @@ public class ApproverResolver(
         var current = startEmployeeId;
         var visited = new HashSet<Guid> { current };
 
-        // 1. DirectManager (Level 1): 1 hop ke atasan langsung
-        if (targetLevel == StepLevels.DirectManager)
+        for (var i = 1; i <= hops; i++)
         {
-            var managerId = await employees.GetManagerIdAsync(current, ct);
-            if (managerId is null)
-                throw new BusinessRuleException("Approval chain is incomplete: no active direct manager.");
-
-            return managerId;
-        }
             var managerId = await employees.GetManagerIdAsync(
                 current,
                 ct);
 
             if (managerId is null)
             {
-                if (current != startEmployeeId)
-                    return current;
-
-                throw new BusinessRuleException("Approval chain is incomplete: no active manager found.");
                 throw new BusinessRuleException(
                     $"Approval chain is incomplete: no active manager at hop {i}.");
             }
 
             if (!visited.Add(managerId.Value))
-                throw new BusinessRuleException("Circular manager hierarchy detected.");
+            {
+                throw new BusinessRuleException(
+                    "Circular manager hierarchy detected.");
+            }
 
             current = managerId.Value;
-            var (_, currentRoles) = await employees.GetManagerAndRolesAsync(current, ct);
-
-            if (targetLevel == StepLevels.DepartmentManager)
-            {
-                // Jika atasan memiliki peran Department Manager (ROL-02) atau Division Manager (ROL-03), tetapkan sebagai approver
-                if (currentRoles.Contains(Roles.DepartmentManager) || currentRoles.Contains(Roles.DivisionManager))
-                    return current;
-            }
-            else if (targetLevel == StepLevels.DivisionManager)
-            {
-                if (currentRoles.Contains(Roles.DivisionManager))
-                    return current;
-            }
-        }
-    }
-}
         }
 
         return current;
