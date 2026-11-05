@@ -137,12 +137,17 @@ public class TicketNotificationHandler(
                     ? $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan diteruskan ke Finance untuk peninjauan anggaran."
                     : $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan saat ini sedang diteruskan ke tahap berikutnya.";
 
+                var approveNote = !string.IsNullOrWhiteSpace(notification.Note) 
+                    ? notification.Note 
+                    : "Disetujui untuk diteruskan ke tahap berikutnya.";
+
                 var approveBody = EmailTemplates.Notification(
                     recipientName: requester.FullName,
                     title: "Tiket Anda Disetujui",
                     message: requesterMessage,
                     ticketNumber: ticket.TicketNumber,
-                    note: notification.Note
+                    // note: notification.Note
+                    note: approveNote
                 );
                 await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Tiket Disetujui: {ticket.TicketNumber}", approveBody, ct);
 
@@ -160,7 +165,8 @@ public class TicketNotificationHandler(
                         message: $"Tiket pengadaan <strong>{ticket.TicketNumber}</strong> dari <strong>{requester.FullName}</strong> telah disetujui Manajer dan masuk ke Finance untuk ditinjau anggarannya.",
                         ticketNumber: ticket.TicketNumber,
                         items: items,
-                        note: notification.Note
+                        // note: notification.Note
+                        note: approveNote
                     );
                     await emailService.SendEmailAsync(financeEmails, $"[ASMARA] Tiket Pengadaan Masuk: {ticket.TicketNumber}", financeBody, ct);
                 }
@@ -178,7 +184,8 @@ public class TicketNotificationHandler(
                         title: "Penugasan Perawatan Baru",
                         message: $"Tiket perawatan {ticket.TicketNumber} telah disetujui Manajer. Silakan buka aplikasi ASMARA untuk menugaskan teknisi penanggung jawab.",
                         ticketNumber: ticket.TicketNumber,
-                        note: notification.Note,
+                        // note: notification.Note,
+                        note: approveNote,
                         extraInfo: extraInfo
                     );
                     await emailService.SendEmailAsync(itSupportEmails, $"[ASMARA] Penugasan Perawatan IT: {ticket.TicketNumber}", itBody, ct);
@@ -186,25 +193,74 @@ public class TicketNotificationHandler(
                 break;
 
             case "revise":
+                var reviseNote = !string.IsNullOrWhiteSpace(notification.Note) 
+                    ? notification.Note 
+                    : "Harap periksa kembali detail tiket dan ajukan perbaikan data yang diperlukan.";
+
                 var reviseBody = EmailTemplates.Notification(
                     recipientName: requester.FullName,
                     title: "Permintaan Revisi Tiket",
                     message: $"Tiket Anda membutuhkan revisi data dari <strong>{actor.FullName}</strong>. Silakan periksa catatan revisi di bawah dan ajukan kembali setelah diperbarui.",
                     ticketNumber: ticket.TicketNumber,
-                    note: notification.Note ?? "Harap periksa kembali detail tiket Anda."
+                    // note: notification.Note ?? "Harap periksa kembali detail tiket Anda."
+                    note: reviseNote
                 );
                 await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Permintaan Revisi: {ticket.TicketNumber}", reviseBody, ct);
                 break;
 
             case "reject":
+                var rejectNote = !string.IsNullOrWhiteSpace(notification.Note) 
+                    ? notification.Note 
+                    : "Pengajuan tiket tidak disetujui / dihentikan oleh peninjau.";
+
                 var rejectBody = EmailTemplates.Notification(
                     recipientName: requester.FullName,
                     title: "Tiket Ditolak",
                     message: $"Pengajuan tiket Anda telah ditolak oleh <strong>{actor.FullName}</strong> dan tiket telah ditutup.",
                     ticketNumber: ticket.TicketNumber,
-                    note: notification.Note
+                    // note: notification.Note
+                    note: rejectNote
                 );
                 await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Tiket Ditolak: {ticket.TicketNumber}", rejectBody, ct);
+                break;
+
+            case "assignhandler":
+                var assignedTech = ticket.AssignedToEmployeeId.HasValue
+                    ? await employeeRepository.GetByIdAsync(ticket.AssignedToEmployeeId.Value, ct)
+                    : null;
+
+                var maintDetail = notification.MaintenanceDetail ??
+                    await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+
+                var assetInfo = maintDetail?.Asset?.AssetTag ?? "Aset Terdaftar";
+                var complaint = maintDetail?.Description ?? ticket.Description ?? "-";
+
+                // 1. Email ke Teknisi yang ditugaskan (assignedTo)
+                if (assignedTech != null && !string.IsNullOrWhiteSpace(assignedTech.Email))
+                {
+                    var techExtraInfo = $"<strong>Pemohon:</strong> {requester.FullName}<br><strong>Asset Tag:</strong> {assetInfo}<br><strong>Keluhan:</strong> {complaint}";
+                    var techBody = EmailTemplates.Notification(
+                        recipientName: assignedTech.FullName,
+                        title: "Penugasan Perbaikan Unit",
+                        message: $"Anda telah ditugaskan oleh IT Support (<strong>{actor.FullName}</strong>) untuk menangani perbaikan perangkat pada tiket ini. Silakan tunggu penyerahan unit dari pemohon.",
+                        ticketNumber: ticket.TicketNumber,
+                        note: !string.IsNullOrWhiteSpace(notification.Note) ? notification.Note : "Harap segera tindak lanjuti setelah perangkat diterima.",
+                        extraInfo: techExtraInfo
+                    );
+                    await emailService.SendEmailAsync(assignedTech.Email, $"[ASMARA] Penugasan Perbaikan: {ticket.TicketNumber}", techBody, ct);
+                }
+
+                // 2. Email ke Pemohon (Requester) bahwa teknisi sudah ditugaskan
+                var reqExtraInfo = $"<strong>Teknisi Penanggung Jawab:</strong> {assignedTech?.FullName ?? "Teknisi IT Support"}<br><strong>Asset Tag:</strong> {assetInfo}";
+                var reqBody = EmailTemplates.Notification(
+                    recipientName: requester.FullName,
+                    title: "Teknisi Perbaikan Ditugaskan",
+                    message: $"Tiket perawatan Anda telah ditugaskan kepada teknisi <strong>{assignedTech?.FullName ?? "Teknisi IT"}</strong>. Silakan serahkan perangkat Anda kepada teknisi terkait untuk proses pemeriksaan dan perbaikan.",
+                    ticketNumber: ticket.TicketNumber,
+                    note: notification.Note,
+                    extraInfo: reqExtraInfo
+                );
+                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Teknisi Ditugaskan: {ticket.TicketNumber}", reqBody, ct);
                 break;
 
             case "completed":

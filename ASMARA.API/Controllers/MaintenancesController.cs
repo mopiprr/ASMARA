@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Enums;
+using ASMARA.API.Enums;
 using ASMARA.API.Features.Maintenance.Commands.AssignHandlerMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.CreateMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.ReceiveItem;
