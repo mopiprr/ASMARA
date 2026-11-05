@@ -1,5 +1,6 @@
 ﻿using ASMARA.API.Features.Auth;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Asmara.API.Controllers;
@@ -15,6 +16,7 @@ public class AuthController : ControllerBase
         _mediator = mediator;
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         [FromBody] LoginCommand command,
