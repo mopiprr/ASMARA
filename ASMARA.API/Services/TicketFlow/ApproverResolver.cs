@@ -1,4 +1,3 @@
-
 using ASMARA.API.Entities;
 using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Data.Repositories;
@@ -6,7 +5,9 @@ using ASMARA.API.Enums;
 
 namespace ASMARA.API.Services.TicketFlow;
 
-public class ApproverResolver(IEmployeeRepository employees) : IApproverResolver
+public class ApproverResolver(
+    IEmployeeRepository employees
+) : IApproverResolver
 {
     public async Task<Guid?> ResolveAsync(
         Ticket ticket,
@@ -22,26 +23,31 @@ public class ApproverResolver(IEmployeeRepository employees) : IApproverResolver
         if (level == StepLevels.AssignedHandler)
         {
             if (ticket.AssignedToEmployeeId is null)
+            {
                 throw new BusinessRuleException(
                     "Handler has not been assigned to this ticket.");
+            }
 
             return ticket.AssignedToEmployeeId;
         }
 
-        // Role-based approval: Finance, Purchasing, Inventory, IT Support.
-        // Semua user dengan role terkait dapat melihat dan mengambil tugas.
+        // Role-based approval:
+        // Finance, Purchasing, Inventory, IT Support.
         if (LevelRoleMap.IsRoleLevel(level.Value))
             return null;
 
         // Procurement Department Approval:
-        // Level 2 diarahkan ke manager langsung requester.
-        if ((TicketTypeEnum)ticket.TicketType == TicketTypeEnum.Procurement
-            && level == StepLevels.DepartmentManager)
+        // Direct Manager requester.
+        if ((TicketTypeEnum)ticket.TicketType ==
+                TicketTypeEnum.Procurement &&
+            level == StepLevels.DepartmentManager)
         {
-            return await GetDirectManagerAsync(ticket.EmployeeId, ct);
+            return await GetDirectManagerAsync(
+                ticket.EmployeeId,
+                ct);
         }
 
-        // Workflow lain tetap menggunakan manager chain berdasarkan level.
+        // Other workflows use manager hierarchy.
         if (level is >= StepLevels.DirectManager
             and <= StepLevels.DivisionManager)
         {
@@ -59,11 +65,15 @@ public class ApproverResolver(IEmployeeRepository employees) : IApproverResolver
         Guid employeeId,
         CancellationToken ct)
     {
-        var managerId = await employees.GetManagerIdAsync(employeeId, ct);
+        var managerId = await employees.GetManagerIdAsync(
+            employeeId,
+            ct);
 
         if (managerId is null)
+        {
             throw new BusinessRuleException(
                 "Requester does not have an assigned Department Manager.");
+        }
 
         return managerId;
     }
