@@ -2,6 +2,7 @@ using ASMARA.API.Enums;
 
 using ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
 using ASMARA.API.Features.Procurement.Commands.ReceiveProcurementGoods;
+using ASMARA.API.Features.Procurement.Commands.ResubmitProcurementTicket;
 using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 using ASMARA.API.Features.Procurement.Queries.GetProcurementTickets;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
@@ -81,6 +82,33 @@ public class ProcurementsController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(
             new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, TicketActionEnum.Revise, request?.Note),
+            ct);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/resubmit")]
+    [HttpPut("{id:guid}/resubmit")]
+    public async Task<ActionResult<TransitionResult>> Resubmit(
+        Guid id,
+        [FromBody] ResubmitProcurementTicketRequestDto request,
+        CancellationToken ct)
+    {
+        var result = await sender.Send(
+            new ResubmitProcurementTicketCommand(id, request),
+            ct);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<ActionResult<TransitionResult>> Cancel(
+        Guid id,
+        [FromBody] TicketNoteRequestDto? request,
+        CancellationToken ct)
+    {
+        var result = await sender.Send(
+            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, TicketActionEnum.Cancel, request?.Note),
             ct);
 
         return Ok(result);

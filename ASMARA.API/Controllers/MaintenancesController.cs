@@ -1,6 +1,9 @@
 using ASMARA.API.Enums;
-using ASMARA.API.Features.Maintenance.Commands.AssignHandler;
+using ASMARA.API.Features.Maintenance.Commands.AssignHandlerMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.CreateMaintenanceTicket;
+using ASMARA.API.Features.Maintenance.Commands.ReceiveItem;
+using ASMARA.API.Features.Maintenance.Commands.RejectMaintenanceTicket;
+using ASMARA.API.Features.Maintenance.Commands.SubmitRepairResult;
 using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
@@ -8,7 +11,6 @@ using ASMARA.API.Services.TicketFlow;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace ASMARA.API.Controllers;
 
@@ -28,30 +30,42 @@ public class MaintenancesController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id:guid}/approve")]
-    public async Task<ActionResult<TicketResponseDto>> Approve(Guid id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] TicketNoteRequestDto? request,
-       CancellationToken ct)
+    public async Task<ActionResult<TransitionResult>> Approve(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
     {
-        await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Approve, request?.Note), ct);
+        var result = await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Approve, request?.Note), ct);
 
-        return Ok(await sender.Send(new GetTicketByIdQuery(id), ct));
+        return Ok(result);
     }
 
     [HttpPost("{id:guid}/reject")]
-    public async Task<ActionResult<TicketResponseDto>> Reject(Guid id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] TicketNoteRequestDto? request,
-       CancellationToken ct)
+    public async Task<ActionResult<TransitionResult>> Reject(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
     {
-        await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Reject, request?.Note), ct);
+        var result = await sender.Send(new RejectMaintenanceTicketCommand(id, request?.Note), ct);
 
-        return Ok(await sender.Send(new GetTicketByIdQuery(id), ct));
-    }
-
-    [HttpPost("{id:guid}/assign")]
-    public async Task<ActionResult<TransitionResult>> Assign(
-        Guid id,
-        [FromBody] AssignTechnicianDto request,
-        CancellationToken ct)
-    {
-        var result = await sender.Send(new AssignMaintenanceHandlerCommand(id, request), ct);
         return Ok(result);
     }
+
+    [HttpPost("{id:guid}/assign-handler")]
+    public async Task<ActionResult<TransitionResult>> AssignHandler(Guid id, [FromBody] AssignTechnicianDto request, CancellationToken ct)
+        => Ok(await sender.Send(new AssignHandlerCommand(id, request), ct));
+
+    [HttpPost("{id:guid}/send")]
+    public async Task<ActionResult<TransitionResult>> Send(Guid id, [FromBody] TicketNoteRequestDto ? request, CancellationToken ct)
+        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Send, request?.Note), ct));
+
+    [HttpPost("{id:guid}/receive")]
+    public async Task<ActionResult<TransitionResult>> Receive(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
+        => Ok(await sender.Send(new ReceiveItemCommand(id, request?.Note), ct));
+
+    [HttpPost("{id:guid}/repair-result")]
+    public async Task<ActionResult<TransitionResult>> SubmitRepairResult(Guid id, [FromBody] SubmitRepairResultRequestDto request, CancellationToken ct)
+        => Ok(await sender.Send(new SubmitRepairResultCommand(id, request), ct));
+
+    [HttpPost("{id:guid}/part-check")]
+    public async Task<ActionResult<TransitionResult>> PartCheck(Guid id, [FromBody] PartCheckRequestDto request, CancellationToken ct)
+        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, request.Available ? TicketActionEnum.PartAvailable : TicketActionEnum.PartUnavailable, request.Note), ct));
+
+    [HttpPost("{id:guid}/close")]
+    public async Task<ActionResult<TransitionResult>> Close(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
+        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Close, request?.Note), ct));
 }

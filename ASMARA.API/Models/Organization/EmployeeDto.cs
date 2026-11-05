@@ -38,3 +38,5 @@ public record CreateEmployeeRequest(
         DateTime CreatedAt,
         DateTime? TerminatedAt
     );
+
+public record HandlerOptionDto(Guid EmployeeId, string EmployeeNumber, string FullName);
