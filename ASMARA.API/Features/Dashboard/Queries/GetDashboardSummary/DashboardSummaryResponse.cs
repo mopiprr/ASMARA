@@ -16,6 +16,7 @@ public class UserProfileResponse
     public string EmployeeNumber { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string? DepartmentName { get; set; }
     public string[] Roles { get; set; } = [];
 }
 

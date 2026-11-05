@@ -24,16 +24,17 @@ public class GetProcurementTicketsQueryHandler(
         var roles = currentUser.Roles;
 
         var procurementTickets = await tickets.QueryNoTracking()
-            .Where(t =>
-                t.TicketType == (byte)TicketTypeEnum.Procurement)
-            .Include(t => t.Employee)
-            .Include(t => t.TicketWorkflowLogs)
-            .Include(t => t.ProcurementDetails)
-                .ThenInclude(d => d.Item)
-            .Include(t => t.ProcurementDetails)
-                .ThenInclude(d => d.ItemCategory)
-            .OrderByDescending(t => t.CreatedAt)
-            .ToListAsync(ct);
+        .Where(t =>
+            t.TicketType == (byte)TicketTypeEnum.Procurement &&
+            t.EmployeeId == employeeId)
+        .Include(t => t.Employee)
+        .Include(t => t.TicketWorkflowLogs)
+        .Include(t => t.ProcurementDetails)
+            .ThenInclude(d => d.Item)
+        .Include(t => t.ProcurementDetails)
+            .ThenInclude(d => d.ItemCategory)
+        .OrderByDescending(t => t.CreatedAt)
+        .ToListAsync(ct);
 
         var result = new List<TicketResponseDto>();
 
@@ -101,12 +102,12 @@ public class GetProcurementTicketsQueryHandler(
             }
 
             var canView =
-                isRequester ||
-                ticket.CurrentTaskEmployeeId == employeeId ||
-                canApprove ||
-                canRevise ||
-                canReject ||
-                canReceiveGoods;
+            isRequester ||
+            ticket.CurrentTaskEmployeeId == employeeId ||
+            canApprove ||
+            canRevise ||
+            canReject ||
+            canReceiveGoods;
 
             if (!canView)
                 continue;
