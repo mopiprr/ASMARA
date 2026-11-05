@@ -1,5 +1,4 @@
 using ASMARA.API.Common.Paging;
-using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 using ASMARA.API.Features.Tickets.Queries.GetAllMyTicketsQuery;
 using ASMARA.API.Features.Tickets.Queries.GetPendingTickets;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
