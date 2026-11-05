@@ -27,6 +27,10 @@ public class TicketsController(ISender sender) : ControllerBase
     public async Task<ActionResult<PagedResult<PendingTicketListItemDto>>> GetPendingTickets([FromQuery] GetPendingTicketsQuery query, CancellationToken ct)
        => Ok(await sender.Send(query, ct));
 
+    [HttpGet("pending/{id:guid}")]
+    public async Task<ActionResult<TicketResponseDto>> GetPendingTicketById(Guid id, CancellationToken ct)
+       => Ok(await sender.Send(new GetPendingTicketByIdQuery(id), ct));
+
     [HttpGet("completed")]
     public async Task<ActionResult<PagedResult<CompletedTicketListItemDto>>> GetCompletedTickets([FromQuery] GetCompletedTicketsQuery query, CancellationToken ct)
        => Ok(await sender.Send(query, ct));

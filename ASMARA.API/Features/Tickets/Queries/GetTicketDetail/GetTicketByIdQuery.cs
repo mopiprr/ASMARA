@@ -1,4 +1,5 @@
 ﻿using ASMARA.API.Common.Exceptions;
+using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Models.Ticket;
 using ASMARA.API.Services.TicketFlow;
@@ -9,13 +10,24 @@ namespace ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 
 public record GetTicketByIdQuery(Guid Id) : IRequest<TicketResponseDto>;
 
-public class GetTicketByIdQueryHandler(ITicketRepository tickets)
+public class GetTicketByIdQueryHandler(
+    ITicketRepository tickets,
+    ICurrentUser currentUser)
     : IRequestHandler<GetTicketByIdQuery, TicketResponseDto>
 {
-    public async Task<TicketResponseDto> Handle(GetTicketByIdQuery query, CancellationToken ct)
+    public async Task<TicketResponseDto> Handle(
+        GetTicketByIdQuery query,
+        CancellationToken ct)
     {
+        var employeeId = currentUser.EmployeeId;
+
         var dto = await tickets.QueryNoTracking()
-            .Where(t => t.Id == query.Id)
+            .Where(t =>
+                t.Id == query.Id &&
+                (
+                    t.EmployeeId == employeeId ||
+                    t.CurrentTaskEmployeeId == employeeId
+                ))
             .Select(t => new TicketResponseDto(
                 t.Id,
                 t.ParentTicketId,
@@ -31,7 +43,7 @@ public class GetTicketByIdQueryHandler(ITicketRepository tickets)
                 t.ClosedAt,
                 t.UpdatedAt,
                 t.CurrentTaskEmployeeId,
-                StepCodes.Created,                                
+                StepCodes.Created,
                 t.MaintenanceDetail == null ? null : new MaintenanceDetailResponseDto(
                     t.MaintenanceDetail.TicketId,
                     t.MaintenanceDetail.AssetId,
@@ -41,7 +53,9 @@ public class GetTicketByIdQueryHandler(ITicketRepository tickets)
                     t.MaintenanceDetail.HandlerNote,
                     t.MaintenanceDetail.PartRequirement,
                     t.MaintenanceDetail.ReplacementAssetId,
-                    t.MaintenanceDetail.ReplacementAsset != null ? t.MaintenanceDetail.ReplacementAsset.AssetTag : null,
+                    t.MaintenanceDetail.ReplacementAsset != null
+                        ? t.MaintenanceDetail.ReplacementAsset.AssetTag
+                        : null,
                     t.MaintenanceDetail.CreatedAt),
                 t.ProcurementDetails
                     .Select(p => new ProcurementDetailResponseDto(
@@ -57,10 +71,13 @@ public class GetTicketByIdQueryHandler(ITicketRepository tickets)
                         p.CreatedAt))
                     .ToList()))
             .FirstOrDefaultAsync(ct)
-            ?? throw new NotFoundException($"Ticket {query.Id} was not found.");
+            ?? throw new NotFoundException(
+                $"Ticket {query.Id} was not found or you are not allowed to access it.");
 
-        // Step sekarang = ToStep dari log terbaru (bukan kolom tiket)
-        var currentStep = await tickets.GetCurrentStepAsync(query.Id, ct) ?? StepCodes.Created;
+        var currentStep =
+            await tickets.GetCurrentStepAsync(query.Id, ct)
+            ?? StepCodes.Created;
+
         return dto with { CurrentStep = currentStep };
     }
 }
