@@ -20,13 +20,38 @@ public class GetProcurementTicketsQueryHandler(
     {
         var employeeId = currentUser.EmployeeId;
 
-        return await tickets.QueryNoTracking()
+        var isFinance = currentUser.IsInRole(Roles.Finance);
+        var isPurchasing = currentUser.IsInRole(Roles.Purchasing);
+
+        var procurementQuery = tickets.QueryNoTracking()
             .Where(t =>
-                t.TicketType == (byte)TicketTypeEnum.Procurement &&
-                (
-                    t.EmployeeId == employeeId ||
-                    t.CurrentTaskEmployeeId == employeeId
-                ))
+                t.TicketType == (byte)TicketTypeEnum.Procurement);
+
+        procurementQuery = procurementQuery.Where(t =>
+            // Requester: hanya melihat tiket miliknya.
+            t.EmployeeId == employeeId
+
+            // Approver individual: hanya melihat tiket yang ditugaskan.
+            || t.CurrentTaskEmployeeId == employeeId
+
+            // Finance: melihat tiket pada tahap Finance Approval.
+            || (isFinance &&
+                t.TicketWorkflowLogs
+                    .OrderByDescending(log => log.CreatedAt)
+                    .ThenByDescending(log => log.Id)
+                    .Select(log => log.ToStep)
+                    .FirstOrDefault() == StepCodes.FinanceApproval)
+
+            // Purchasing: melihat tiket pada tahap Purchasing.
+            || (isPurchasing &&
+                t.TicketWorkflowLogs
+                    .OrderByDescending(log => log.CreatedAt)
+                    .ThenByDescending(log => log.Id)
+                    .Select(log => log.ToStep)
+                    .FirstOrDefault() == StepCodes.Purchasing)
+        );
+
+        return await procurementQuery
             .OrderByDescending(t => t.CreatedAt)
             .Select(t => new TicketResponseDto(
                 t.Id,
