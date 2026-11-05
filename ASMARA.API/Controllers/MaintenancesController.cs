@@ -1,8 +1,10 @@
-﻿using ASMARA.API.Enums;
+using ASMARA.API.Enums;
+using ASMARA.API.Features.Maintenance.Commands.AssignHandler;
 using ASMARA.API.Features.Maintenance.Commands.CreateMaintenanceTicket;
 using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
+using ASMARA.API.Services.TicketFlow;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -41,5 +43,15 @@ public class MaintenancesController(ISender sender) : ControllerBase
         await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Reject, request?.Note), ct);
 
         return Ok(await sender.Send(new GetTicketByIdQuery(id), ct));
+    }
+
+    [HttpPost("{id:guid}/assign")]
+    public async Task<ActionResult<TransitionResult>> Assign(
+        Guid id,
+        [FromBody] AssignTechnicianDto request,
+        CancellationToken ct)
+    {
+        var result = await sender.Send(new AssignMaintenanceHandlerCommand(id, request), ct);
+        return Ok(result);
     }
 }
