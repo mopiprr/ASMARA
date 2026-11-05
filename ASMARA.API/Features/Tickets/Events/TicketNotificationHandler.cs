@@ -133,10 +133,14 @@ public class TicketNotificationHandler(
                 }
                 break;
             case "approve":
+                var requesterMessage = ticket.TicketType == (byte)TicketTypeEnum.Procurement
+                    ? $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan diteruskan ke Finance untuk peninjauan anggaran."
+                    : $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan saat ini sedang diteruskan ke tahap berikutnya.";
+
                 var approveBody = EmailTemplates.Notification(
                     recipientName: requester.FullName,
                     title: "Tiket Anda Disetujui",
-                    message: $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan saat ini sedang diteruskan ke tahap berikutnya.",
+                    message: requesterMessage,
                     ticketNumber: ticket.TicketNumber,
                     note: notification.Note
                 );
@@ -152,13 +156,13 @@ public class TicketNotificationHandler(
 
                     var financeBody = EmailTemplates.Procurement(
                         recipientName: "Tim Finance",
-                        title: "Tinjauan Anggaran Pengadaan",
-                        message: $"Tiket pengadaan {ticket.TicketNumber} dari {requester.FullName} telah disetujui Manajer dan siap ditinjau anggarannya.",
+                        title: "Tiket Masuk: Tinjauan Anggaran Pengadaan",
+                        message: $"Tiket pengadaan <strong>{ticket.TicketNumber}</strong> dari <strong>{requester.FullName}</strong> telah disetujui Manajer dan masuk ke Finance untuk ditinjau anggarannya.",
                         ticketNumber: ticket.TicketNumber,
                         items: items,
                         note: notification.Note
                     );
-                    await emailService.SendEmailAsync(financeEmails, $"[ASMARA] Tinjauan Anggaran Pengadaan: {ticket.TicketNumber}", financeBody, ct);
+                    await emailService.SendEmailAsync(financeEmails, $"[ASMARA] Tiket Pengadaan Masuk: {ticket.TicketNumber}", financeBody, ct);
                 }
                 else if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
                 {
