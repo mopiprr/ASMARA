@@ -1,5 +1,6 @@
 using ASMARA.API.Common.Paging;
 using ASMARA.API.Features.Tickets.Queries.GetAllMyTicketsQuery;
+using ASMARA.API.Features.Tickets.Queries.GetCompletedTickets;
 using ASMARA.API.Features.Tickets.Queries.GetPendingTickets;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
@@ -26,4 +27,11 @@ public class TicketsController(ISender sender) : ControllerBase
     public async Task<ActionResult<PagedResult<PendingTicketListItemDto>>> GetPendingTickets([FromQuery] GetPendingTicketsQuery query, CancellationToken ct)
        => Ok(await sender.Send(query, ct));
 
+    [HttpGet("completed")]
+    public async Task<ActionResult<PagedResult<CompletedTicketListItemDto>>> GetCompletedTickets([FromQuery] GetCompletedTicketsQuery query, CancellationToken ct)
+       => Ok(await sender.Send(query, ct));
+
+    [HttpGet("completed/my")]
+    public async Task<ActionResult<PagedResult<CompletedTicketListItemDto>>> GetMyCompletedTickets([FromQuery] GetCompletedTicketsQuery query, CancellationToken ct)
+       => Ok(await sender.Send(query with { OnlyMyTickets = true }, ct));
 }
