@@ -21,6 +21,13 @@ public record CreateProcurementTicketRequestDto(
     Guid? ParentTicketId = null
     );
     
+public record ResubmitProcurementTicketRequestDto(
+    string Subject,
+    string? Description,
+    List<CreateProcurementItemRequest> Items,
+    string? Note = null
+    );
+
 public record CreateProcurementItemRequest(
     int ItemCategoryId,
     string ItemName,

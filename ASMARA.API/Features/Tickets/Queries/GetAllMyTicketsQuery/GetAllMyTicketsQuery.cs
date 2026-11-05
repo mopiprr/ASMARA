@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Common.Paging;
+using ASMARA.API.Common.Paging;
 using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Enums;
@@ -8,8 +8,17 @@ using MediatR;
 
 namespace ASMARA.API.Features.Tickets.Queries.GetAllMyTicketsQuery;
 
+// public record GetAllMyTicketsQuery(
+//     TicketTypeEnum Type, string? Search, string? SortBy, int Page = 1, int PageSize = 10, bool Desc = false)
+//     : IRequest<PagedResult<TicketListItemDto>>;
+
 public record GetAllMyTicketsQuery(
-    TicketTypeEnum Type, string? Search, string? SortBy, int Page = 1, int PageSize = 10, bool Desc = false)
+    TicketTypeEnum? Type = null,
+    string? Search = null,
+    string? SortBy = null,
+    int Page = 1,
+    int PageSize = 10,
+    bool Desc = false)
     : IRequest<PagedResult<TicketListItemDto>>;
 
 public class GetAllMyTicketsQueryHandler(ITicketRepository tickets, IWorkflowStepRepository workflowSteps, ICurrentUser currentUser)
@@ -18,40 +27,47 @@ public class GetAllMyTicketsQueryHandler(ITicketRepository tickets, IWorkflowSte
     public async Task<PagedResult<TicketListItemDto>> Handle(GetAllMyTicketsQuery request, CancellationToken ct)
     {
         var employeeId = currentUser.EmployeeId;
-        var type = (byte)request.Type;
 
         var query = tickets.QueryNoTracking()
-            .Where(t => t.EmployeeId == employeeId && t.TicketType == type)
-            .Select(t => new
-            {
-                t.Id,
-                t.TicketNumber,
-                t.Subject,
-                t.CreatedAt,
-                CurrentStep = t.TicketWorkflowLogs
-                    .OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id)
-                    .Select(l => l.ToStep)
-                    .FirstOrDefault() ?? StepCodes.Created
-            });
+            .Where(t => t.EmployeeId == employeeId);
+
+        if (request.Type.HasValue)
+        {
+            var filterType = (byte)request.Type.Value;
+            query = query.Where(t => t.TicketType == filterType);
+        }
+
+        var projected = query.Select(t => new
+        {
+            t.Id,
+            t.TicketNumber,
+            t.Subject,
+            t.CreatedAt,
+            t.TicketType,
+            CurrentStep = t.TicketWorkflowLogs
+                .OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id)
+                .Select(l => l.ToStep)
+                .FirstOrDefault() ?? StepCodes.Created
+        });
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
-            query = query.Where(x => x.TicketNumber.Contains(search) || x.Subject.Contains(search));
+            projected = projected.Where(x => x.TicketNumber.Contains(search) || x.Subject.Contains(search));
         }
 
-        query = (request.SortBy?.ToLower()) switch
+        projected = (request.SortBy?.ToLower()) switch
         {
-            "ticketnumber" => request.Desc ? query.OrderByDescending(x => x.TicketNumber) : query.OrderBy(x => x.TicketNumber),
-            "subject" => request.Desc ? query.OrderByDescending(x => x.Subject) : query.OrderBy(x => x.Subject),
-            "status" => request.Desc ? query.OrderByDescending(x => x.CurrentStep) : query.OrderBy(x => x.CurrentStep),
-            "date" => request.Desc ? query.OrderByDescending(x => x.CreatedAt) : query.OrderBy(x => x.CreatedAt),
-            _ => request.Desc ? query.OrderByDescending(x => x.CreatedAt) : query.OrderBy(x => x.CreatedAt)
+            "ticketnumber" => request.Desc ? projected.OrderByDescending(x => x.TicketNumber) : projected.OrderBy(x => x.TicketNumber),
+            "subject" => request.Desc ? projected.OrderByDescending(x => x.Subject) : projected.OrderBy(x => x.Subject),
+            "status" => request.Desc ? projected.OrderByDescending(x => x.CurrentStep) : projected.OrderBy(x => x.CurrentStep),
+            "date" => request.Desc ? projected.OrderByDescending(x => x.CreatedAt) : projected.OrderBy(x => x.CreatedAt),
+            _ => request.Desc ? projected.OrderByDescending(x => x.CreatedAt) : projected.OrderBy(x => x.CreatedAt)
         };
 
         var steps = workflowSteps.QueryNoTracking();
 
-        return await query
+        return await projected
             .Select(x => new TicketListItemDto(
                 x.Id,
                 x.TicketNumber,
@@ -59,7 +75,7 @@ public class GetAllMyTicketsQueryHandler(ITicketRepository tickets, IWorkflowSte
                 x.CreatedAt,
                 x.CurrentStep,
                 steps.Where(s => s.StepCode == x.CurrentStep
-                              && s.Workflow.TicketType == type
+                              && s.Workflow.TicketType == x.TicketType
                               && s.Workflow.IsActive)
                      .Select(s => s.Name)
                      .FirstOrDefault() ?? "Created"))

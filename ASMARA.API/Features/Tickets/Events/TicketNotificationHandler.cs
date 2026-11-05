@@ -263,6 +263,32 @@ public class TicketNotificationHandler(
                 await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Teknisi Ditugaskan: {ticket.TicketNumber}", reqBody, ct);
                 break;
 
+            case "resubmit":
+                var resubmitManager = (ticket.CurrentTaskEmployeeId.HasValue ? await employeeRepository.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
+                    ?? (requester.ManagerId.HasValue ? await employeeRepository.GetByIdAsync(requester.ManagerId.Value, ct) : null);
+
+                if (resubmitManager != null && !string.IsNullOrWhiteSpace(resubmitManager.Email))
+                {
+                    var items = notification.ProcurementItems?.ToList() ?? 
+                        await procurementDetailRepository.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
+
+                    var resubmitNote = !string.IsNullOrWhiteSpace(notification.Note)
+                        ? notification.Note
+                        : "Data tiket pengadaan telah diperbarui oleh pemohon dan diajukan kembali.";
+
+                    var resubmitBody = EmailTemplates.Procurement(
+                        recipientName: resubmitManager.FullName,
+                        title: "Review Revisi Tiket Pengadaan",
+                        message: $"Staf Anda, <strong>{requester.FullName}</strong>, telah memperbarui detail pengadaan tiket <strong>{ticket.TicketNumber}</strong> dan mengajukannya kembali untuk ditinjau.",
+                        ticketNumber: ticket.TicketNumber,
+                        items: items,
+                        note: resubmitNote
+                    );
+
+                    await emailService.SendEmailAsync(resubmitManager.Email, $"[ASMARA] Review Revisi Tiket Pengadaan: {ticket.TicketNumber}", resubmitBody, ct);
+                }
+                break;
+
             case "completed":
             case "receivegoods":
             case "repaired":
