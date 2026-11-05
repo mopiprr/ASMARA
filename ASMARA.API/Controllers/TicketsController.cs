@@ -27,10 +27,4 @@ public class TicketsController(ISender sender) : ControllerBase
     public async Task<ActionResult<PagedResult<PendingTicketListItemDto>>> GetPendingTickets([FromQuery] GetPendingTicketsQuery query, CancellationToken ct)
        => Ok(await sender.Send(query, ct));
 
-    [HttpPost("{id:guid}/actions")]
-    public async Task<ActionResult<TicketResponseDto>> ExecuteAction(
-        Guid id,
-        [FromBody] TicketApprovalDto request,
-        CancellationToken ct)
-        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, request), ct));
 }
