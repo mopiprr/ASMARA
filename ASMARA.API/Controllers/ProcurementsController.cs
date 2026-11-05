@@ -1,4 +1,6 @@
+
 using ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
+using ASMARA.API.Features.Procurement.Queries.GetProcurementTickets;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
 using MediatR;
@@ -12,14 +14,31 @@ namespace ASMARA.API.Controllers;
 [Authorize]
 public class ProcurementsController(ISender sender) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<List<TicketResponseDto>>> GetAll(
+        CancellationToken ct)
+    {
+        var result = await sender.Send(
+            new GetProcurementTicketsQuery(), ct);
+
+        return Ok(result);
+    }
+
     [HttpPost]
     public async Task<ActionResult<TicketResponseDto>> Create(
         [FromBody] CreateTicketProcurementDto request,
         CancellationToken ct)
     {
-        var id = await sender.Send(new CreateProcurementTicketCommand(request), ct);
-        var ticket = await sender.Send(new GetTicketByIdQuery(id), ct);
+        var id = await sender.Send(
+            new CreateProcurementTicketCommand(request), ct);
 
-        return CreatedAtAction(nameof(TicketsController.GetById), "Tickets", new { id }, ticket);
+        var ticket = await sender.Send(
+            new GetTicketByIdQuery(id), ct);
+
+        return CreatedAtAction(
+            nameof(TicketsController.GetById),
+            "Tickets",
+            new { id },
+            ticket);
     }
 }
