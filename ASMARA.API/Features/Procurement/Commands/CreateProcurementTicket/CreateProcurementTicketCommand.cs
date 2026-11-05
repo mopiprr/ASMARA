@@ -11,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
 
-public record CreateProcurementTicketCommand(CreateTicketProcurementDto Request) : IRequest<Guid>;
+// public record CreateProcurementTicketCommand(CreateTicketProcurementDto Request) : IRequest<Guid>;
+public record CreateProcurementTicketCommand(CreateProcurementTicketRequestDto Request) : IRequest<Guid>;
 
 public class CreateProcurementTicketCommandHandler(
     ITicketRepository tickets,
@@ -92,15 +93,21 @@ public class CreateProcurementTicketCommandHandler(
                         $"Silakan pilih barang tersebut dari inventaris (gunakan ItemId: {duplicateInventory.Id}) agar tidak terjadi duplikasi.");
                 }
 
-                if (!item.ItemCategoryId.HasValue)
+                // if (!item.ItemCategoryId.HasValue)
+                if (item.ItemCategoryId <= 0)
                 {
                     throw new BusinessRuleException($"Kategori barang wajib dipilih untuk pengajuan barang manual '{trimmedName}'.");
                 }
 
-                var category = await itemCategories.GetByIdAsync(item.ItemCategoryId.Value, ct);
+                // var category = await itemCategories.GetByIdAsync(item.ItemCategoryId.Value, ct);
+                var category = await itemCategories.GetByIdAsync(item.ItemCategoryId, ct);
+                // if (category is null || !category.IsActive)
+                // {
+                //     throw new BusinessRuleException($"Kategori barang dengan ID {item.ItemCategoryId.Value} tidak valid atau tidak aktif.");
+                // }
                 if (category is null || !category.IsActive)
                 {
-                    throw new BusinessRuleException($"Kategori barang dengan ID {item.ItemCategoryId.Value} tidak valid atau tidak aktif.");
+                    throw new BusinessRuleException($"Kategori barang dengan ID {item.ItemCategoryId} tidak valid atau tidak aktif.");
                 }
 
                 validatedItems.Add((

@@ -35,8 +35,10 @@ public class CreateProcurementTicketValidator : AbstractValidator<CreateProcurem
                     item.RuleFor(i => i.ItemName)
                         .NotEmpty();
 
+                    // item.RuleFor(i => i.ItemCategoryId)
+                    //     .NotNull()
+                    //     .GreaterThan(0);
                     item.RuleFor(i => i.ItemCategoryId)
-                        .NotNull()
                         .GreaterThan(0);
                 });
             });
