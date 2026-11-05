@@ -88,7 +88,6 @@ public class ProcurementsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id:guid}/resubmit")]
-    [HttpPut("{id:guid}/resubmit")]
     public async Task<ActionResult<TransitionResult>> Resubmit(
         Guid id,
         [FromBody] ResubmitProcurementTicketRequestDto request,
