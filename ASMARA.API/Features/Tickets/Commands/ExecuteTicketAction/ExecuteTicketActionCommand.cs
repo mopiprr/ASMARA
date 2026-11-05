@@ -37,8 +37,6 @@ public class ExecuteTicketActionCommandHandler(
             throw new InvalidOperationException($"{command.Action} ({command.ExpectedType}) has side effects; use its dedicated command.");
 
         var type = (byte)command.ExpectedType;
-        // if (!await tickets.QueryNoTracking().AnyAsync(t => t.Id == command.TicketId && t.TicketType == type, ct))
-        //     throw new NotFoundException($"{command.ExpectedType} ticket {command.TicketId} was not found.");
         var ticket = await tickets.Query()
             .Include(t => t.Employee)
             .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == type, ct);

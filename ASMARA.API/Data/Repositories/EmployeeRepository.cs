@@ -1,11 +1,13 @@
-﻿using ASMARA.API.Data;
+﻿using ASMARA.API.Common.Security;
 using ASMARA.API.Entities;
+using ASMARA.API.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Data.Repositories;
 
 public class EmployeeRepository(AsmaraDbContext context) : Repository<Employee>(context), IEmployeeRepository
 {
+
     public async Task<Guid?> GetManagerIdAsync(Guid employeeId, CancellationToken ct = default)
     {
         var managerId = await Set
@@ -20,4 +22,10 @@ public class EmployeeRepository(AsmaraDbContext context) : Repository<Employee>(
 
         return managerId;
     }
+
+    public IQueryable<Employee> GetActiveHandlers()
+        => Set.Where(e => e.EmployeeStatus == (byte)EmployeeStatusEnum.Available
+                       && e.Account != null
+                       && e.Account.IsActive
+                       && e.Account.Roles.Any(r => r.RoleCode == Roles.MaintenanceHandler && r.IsActive));
 }

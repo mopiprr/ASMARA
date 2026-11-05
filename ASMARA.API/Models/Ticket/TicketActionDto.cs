@@ -1,3 +1,5 @@
+using ASMARA.API.Enums;
+
 namespace ASMARA.API.Models.Ticket;
 
 public class TicketActionDto
@@ -27,7 +29,7 @@ public record CreateProcurementItemRequest(
     int? ItemId = null
     );
 
-public record TicketNoteRequestDto(string? Note = null);
+public record TicketNoteRequestDto(string? Note = "");
 
 public record TicketApprovalDto(
     string Action,
@@ -53,3 +55,7 @@ public record ReceiveInventoryItemDto(
 public record CloseTicketDto(
     string? FeedbackNote = null
     );
+
+public record PartCheckRequestDto(bool Available, string? Note = null);
+
+public record SubmitRepairResultRequestDto(RepairResultEnum Result, string? HandlerNote = null, string? PartRequirement = null);
