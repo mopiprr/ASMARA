@@ -1,6 +1,8 @@
-﻿using ASMARA.API.Common.Exceptions;
+using ASMARA.API.Common.Exceptions;
+using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Enums;
+using ASMARA.API.Features.Tickets.Events;
 using ASMARA.API.Services.TicketFlow;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +12,16 @@ namespace ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 public record ExecuteTicketActionCommand(Guid TicketId, TicketTypeEnum ExpectedType, TicketActionEnum Action, string? Note) 
     : IRequest<TransitionResult>;
 
-public class ExecuteTicketActionCommandHandler(ITicketRepository tickets, ITicketFlowService ticketFlow, IUnitOfWork uow) 
+// public class ExecuteTicketActionCommandHandler(ITicketRepository tickets, ITicketFlowService ticketFlow, IUnitOfWork uow) 
+public class ExecuteTicketActionCommandHandler(
+    ITicketRepository tickets,
+    ITicketFlowService ticketFlow,
+    IUnitOfWork uow,
+    IMediator mediator,
+    IEmployeeRepository employees,
+    ICurrentUser currentUser) 
     : IRequestHandler<ExecuteTicketActionCommand, TransitionResult>
 {
-    // Aksi yang aman lewat jalur ini (tidak mengubah data lain selain step)
     private static readonly HashSet<TicketActionEnum> SimpleActions =
     [
         TicketActionEnum.Approve, TicketActionEnum.Revise, TicketActionEnum.Reject,
@@ -29,12 +37,27 @@ public class ExecuteTicketActionCommandHandler(ITicketRepository tickets, ITicke
             throw new InvalidOperationException($"{command.Action} ({command.ExpectedType}) has side effects; use its dedicated command.");
 
         var type = (byte)command.ExpectedType;
-        if (!await tickets.QueryNoTracking().AnyAsync(t => t.Id == command.TicketId && t.TicketType == type, ct))
+        // if (!await tickets.QueryNoTracking().AnyAsync(t => t.Id == command.TicketId && t.TicketType == type, ct))
+        //     throw new NotFoundException($"{command.ExpectedType} ticket {command.TicketId} was not found.");
+        var ticket = await tickets.Query()
+            .Include(t => t.Employee)
+            .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == type, ct);
+
+        if (ticket is null)
             throw new NotFoundException($"{command.ExpectedType} ticket {command.TicketId} was not found.");
 
         var result = await ticketFlow.ExecuteAsync(command.TicketId, command.Action, command.Note, ct);
 
         await uow.SaveChangesAsync(ct);
+
+        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+
+        await mediator.Publish(new TicketStatusChangedEvent(
+            ticket,
+            ticket.Employee,
+            actor,
+            command.Action.ToString(),
+            command.Note), ct);
 
         return result;
     }
