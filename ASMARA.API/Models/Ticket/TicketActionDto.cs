@@ -26,7 +26,9 @@ public record CreateProcurementItemRequest(
     decimal Price,
     int? ItemId = null
     );
-    
+
+public record TicketNoteRequestDto(string? Note = null);
+
 public record TicketApprovalDto(
     string Action,
     string? Note
