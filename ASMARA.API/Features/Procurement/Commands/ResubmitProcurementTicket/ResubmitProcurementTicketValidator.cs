@@ -14,7 +14,7 @@ public class ResubmitProcurementTicketValidator : AbstractValidator<ResubmitProc
 
         RuleFor(x => x.Request.Subject)
             .NotEmpty().WithMessage("Subjek pengajuan wajib diisi.")
-            .MaximumLength(100).WithMessage("Subjek pengajuan maksimal 100 karakter.");
+            .MaximumLength(50).WithMessage("Subjek pengajuan maksimal 100 karakter.");
 
         RuleFor(x => x.Request.Description)
             .MaximumLength(500).WithMessage("Deskripsi pengajuan maksimal 500 karakter.");
@@ -30,7 +30,7 @@ public class ResubmitProcurementTicketValidator : AbstractValidator<ResubmitProc
                     .GreaterThan(0).WithMessage("Jumlah barang harus lebih besar dari 0.");
 
                 item.RuleFor(i => i.Price)
-                    .GreaterThanOrEqualTo(0).WithMessage("Harga estimasi barang tidak boleh negatif.");
+                    .GreaterThan(0).WithMessage("Harga estimasi barang tidak boleh negatif.");
 
                 item.When(i => !i.ItemId.HasValue, () =>
                 {

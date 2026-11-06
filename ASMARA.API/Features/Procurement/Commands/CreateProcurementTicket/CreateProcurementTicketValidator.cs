@@ -11,7 +11,7 @@ public class CreateProcurementTicketValidator : AbstractValidator<CreateProcurem
 
         RuleFor(x => x.Request.Subject)
             .NotEmpty()
-            .MaximumLength(100);
+            .MaximumLength(50);
 
         RuleFor(x => x.Request.Description)
             .MaximumLength(500);
@@ -27,7 +27,7 @@ public class CreateProcurementTicketValidator : AbstractValidator<CreateProcurem
                     .GreaterThan(0);
 
                 item.RuleFor(i => i.Price)
-                    .GreaterThanOrEqualTo(0);
+                    .GreaterThan(0);
                 
                 // Validasi khusus untuk pengajuan barang manual (ItemId null)
                 item.When(i => !i.ItemId.HasValue, () =>

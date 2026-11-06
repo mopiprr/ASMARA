@@ -67,4 +67,9 @@ public record PartCheckRequestDto(bool Available, string? Note = null);
 
 public record SubmitRepairResultRequestDto(RepairResultEnum Result, string? HandlerNote = null, string? PartRequirement = null);
 
-public record ReplacementRequestDto(bool Available, int? ReplacementAssetId = null, string? Note = null);
+public record ReplacementRequestDto(bool Available, int? ReplacementAssetId = null, string? Note = null, string? Subject = null,             
+    string? Description = null, List<CreateProcurementItemRequest>? Items = null);  
+
+public record OrderPartRequestDto(string Subject, string? Description, List<CreateProcurementItemRequest> Items, string? Note = null);
+
+public record SendReplacementRequestDto(int ReplacementAssetId, string? Note = null);

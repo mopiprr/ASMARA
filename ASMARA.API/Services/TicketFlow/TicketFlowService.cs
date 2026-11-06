@@ -12,7 +12,11 @@ public class TicketFlowService
     IApproverResolver approverResolver, ICurrentUser currentUser)
     : ITicketFlowService
 {
-    private static readonly HashSet<TicketActionEnum> SystemOnlyActions = [TicketActionEnum.ChildCompleted, TicketActionEnum.ChildRejected];
+    private static readonly HashSet<TicketActionEnum> SystemOnlyActions =
+    [
+        TicketActionEnum.ChildCompleted, TicketActionEnum.ChildRejected,
+        TicketActionEnum.OrderPart, TicketActionEnum.ReplacementUnavailable
+    ];
 
     public Task<TransitionResult> ExecuteAsync(Guid ticketId, TicketActionEnum action, string? note = null, CancellationToken ct = default)
     {
@@ -22,6 +26,29 @@ public class TicketFlowService
         return ExecuteCoreAsync(ticketId, action, note, checkAccess: true, ct);
     }
 
+    public async Task<ChildTicketResult> CreateChildAsync(Guid parentTicketId, TicketActionEnum parentAction, Ticket child,
+        string? note = null, CancellationToken ct = default)
+    {
+        if (parentAction is not (TicketActionEnum.OrderPart or TicketActionEnum.ReplacementUnavailable))
+            throw new TicketStateException($"Action '{parentAction}' does not create a child ticket.");
+
+        if (child.TicketType != (byte)TicketTypeEnum.Procurement)
+            throw new BusinessRuleException("A child ticket must be a Procurement ticket.");
+
+        var parentResult = await ExecuteCoreAsync(parentTicketId, parentAction, note, checkAccess: true, ct);
+
+        if (child.Id == Guid.Empty)
+            child.Id = Guid.CreateVersion7();
+        child.EmployeeId = currentUser.EmployeeId;
+        tickets.Add(child);
+
+        var childResult = await ExecuteCoreAsync(child.Id, TicketActionEnum.Create, note, checkAccess: true, ct);
+
+        child.ParentTicketId = parentTicketId;
+
+        return new ChildTicketResult(parentResult, childResult);
+    }
+
     public async Task<TransitionResult> ExecuteCoreAsync(Guid ticketId, TicketActionEnum action, string? note, bool checkAccess, CancellationToken ct)
     {
         var ticket = await tickets.GetByIdAsync(ticketId, ct);
@@ -29,6 +56,9 @@ public class TicketFlowService
         {
             throw new NotFoundException($"Ticket with ID {ticketId} not found.");
         }
+
+        if (action == TicketActionEnum.Create && ticket.ParentTicketId is not null)
+            throw new TicketStateException("Child tickets can only be created through their parent ticket.");
 
         var type = (TicketTypeEnum)ticket.TicketType;
 
@@ -47,8 +77,7 @@ public class TicketFlowService
         }
         else if (!TransitionMap.TryGetNextStep(type, fromStep, action, out toStep))
         {
-            throw new TicketStateException(
-                $"Action '{action}' is not allowed at step '{fromStep}'.");
+            throw new TicketStateException($"Action '{action}' is not allowed at step '{fromStep}'.");
         }
 
         if (checkAccess && !TaskAccess.CanActOn(ticket, level, currentUser.EmployeeId, currentUser.Roles))

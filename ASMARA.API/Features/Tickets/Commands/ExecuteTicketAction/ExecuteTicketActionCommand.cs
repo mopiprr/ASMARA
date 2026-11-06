@@ -11,8 +11,7 @@ namespace ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 
 public record ExecuteTicketActionCommand(Guid TicketId, TicketTypeEnum ExpectedType, TicketActionEnum Action, string? Note) 
     : IRequest<TransitionResult>;
-
-// public class ExecuteTicketActionCommandHandler(ITicketRepository tickets, ITicketFlowService ticketFlow, IUnitOfWork uow) 
+ 
 public class ExecuteTicketActionCommandHandler(
     ITicketRepository tickets,
     ITicketFlowService ticketFlow,
@@ -45,6 +44,9 @@ public class ExecuteTicketActionCommandHandler(
             throw new NotFoundException($"{command.ExpectedType} ticket {command.TicketId} was not found.");
 
         var result = await ticketFlow.ExecuteAsync(command.TicketId, command.Action, command.Note, ct);
+
+        if (result.FromStep == StepCodes.InventorySendReplacement)
+            throw new BusinessRuleException("Use send-replacement to choose the replacement asset.");
 
         await uow.SaveChangesAsync(ct);
 
