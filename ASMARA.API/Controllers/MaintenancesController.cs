@@ -1,6 +1,7 @@
 using ASMARA.API.Enums;
 using ASMARA.API.Features.Maintenance.Commands.AssignHandlerMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.CreateMaintenanceTicket;
+using ASMARA.API.Features.Maintenance.Commands.ProcessReplacement;
 using ASMARA.API.Features.Maintenance.Commands.ReceiveItem;
 using ASMARA.API.Features.Maintenance.Commands.RejectMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.SubmitRepairResult;
@@ -68,4 +69,17 @@ public class MaintenancesController(ISender sender) : ControllerBase
     [HttpPost("{id:guid}/close")]
     public async Task<ActionResult<TransitionResult>> Close(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
         => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Close, request?.Note), ct));
+
+    [HttpPost("{id:guid}/dispose")]
+    public async Task<ActionResult<TransitionResult>> Dispose(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
+    => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Dispose, request?.Note), ct));
+
+    [HttpPost("{id:guid}/archive")]
+    public async Task<ActionResult<TransitionResult>> Archive(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
+        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.Archive, request?.Note), ct));
+
+    [HttpPost("{id:guid}/replacement")]
+    public async Task<ActionResult<TransitionResult>> Replacement(Guid id, [FromBody] ReplacementRequestDto request, CancellationToken ct)
+        => Ok(await sender.Send(new ProcessReplacementCommand(id, request), ct));
+
 }

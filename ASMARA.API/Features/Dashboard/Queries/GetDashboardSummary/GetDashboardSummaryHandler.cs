@@ -20,6 +20,15 @@ public class GetDashboardSummaryHandler
         GetDashboardSummaryQuery request,
         CancellationToken cancellationToken)
     {
+        // Mengambil nama department berdasarkan employee yang sedang login.
+        var departmentName = await _context.Employees
+            .AsNoTracking()
+            .Where(x => x.Id == request.EmployeeId)
+            .Select(x => x.Department != null
+                ? x.Department.DepartmentName
+                : null)
+            .FirstOrDefaultAsync(cancellationToken);
+
         // Mengambil statistik aset.
         var statistics = new AssetStatisticsResponse
         {
@@ -111,6 +120,7 @@ public class GetDashboardSummaryHandler
                 EmployeeNumber = request.EmployeeNumber,
                 FullName = request.FullName,
                 Email = request.Email,
+                DepartmentName = departmentName,
                 Roles = request.Roles
             },
 
