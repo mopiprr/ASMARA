@@ -1,4 +1,4 @@
-﻿namespace ASMARA.API.Models.Dashboard;
+namespace ASMARA.API.Models.Dashboard;
 
 public class DashboardDto
 {
@@ -13,3 +13,10 @@ public record ActivityTicketListItemDto(
     string CurrentStepName,
     string MyLastAction,    
     DateTime MyLastActionAt);
+
+public record TicketStatisticsDto(
+    int TotalTickets,
+    int PendingTickets,
+    int InProgressTickets,
+    int CompletedTickets
+);
