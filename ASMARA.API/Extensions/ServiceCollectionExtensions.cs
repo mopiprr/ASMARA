@@ -24,8 +24,9 @@ public static class ServiceCollectionExtensions
         #region Services
         services.AddScoped<IApproverResolver, ApproverResolver>();
         services.AddScoped<ITicketFlowService, TicketFlowService>();
+        services.AddScoped<ITicketHistoryService, TicketHistoryService>();
         #endregion
-        
+
         #region Services
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.AddScoped<IEmailService, EmailService>();

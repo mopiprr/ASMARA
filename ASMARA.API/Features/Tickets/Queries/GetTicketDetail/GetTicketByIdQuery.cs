@@ -10,74 +10,93 @@ namespace ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 
 public record GetTicketByIdQuery(Guid Id) : IRequest<TicketResponseDto>;
 
-public class GetTicketByIdQueryHandler(
-    ITicketRepository tickets,
-    ICurrentUser currentUser)
+public class GetTicketByIdQueryHandler(ITicketRepository tickets, ITicketWorkflowLogRepository logs, ITicketHistoryService history,
+    IWorkflowStepRepository workflowSteps, ICurrentUser currentUser)
     : IRequestHandler<GetTicketByIdQuery, TicketResponseDto>
 {
-    public async Task<TicketResponseDto> Handle(
-        GetTicketByIdQuery query,
-        CancellationToken ct)
+    public async Task<TicketResponseDto> Handle(GetTicketByIdQuery query, CancellationToken ct)
     {
         var employeeId = currentUser.EmployeeId;
 
+        var ticket = await tickets.QueryNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == query.Id, ct);
+        if (ticket == null)
+            throw new NotFoundException($"Ticket {query.Id} was not found");
+
+        var currentStep = await tickets.GetCurrentStepAsync(query.Id, ct) ?? StepCodes.Created;
+
+        var canView = ticket.EmployeeId == employeeId 
+                || await logs.QueryNoTracking()
+                    .AnyAsync(l => l.TicketId == query.Id && l.EmployeeId == employeeId, ct)
+                || TaskAccess.CanActOn(
+                    ticket,
+                    await GetStepLevelAsync(ticket.TicketType, currentStep, ct),
+                    employeeId,
+                    currentUser.Roles);
+        if (!canView)
+            throw new ForbiddenException($"You are not allowed to access it.");
+
         var dto = await tickets.QueryNoTracking()
-            .Where(t =>
-                t.Id == query.Id &&
-                (
-                    t.EmployeeId == employeeId ||
-                    t.CurrentTaskEmployeeId == employeeId
-                ))
-            .Select(t => new TicketResponseDto(
-                t.Id,
-                t.ParentTicketId,
-                t.EmployeeId,
-                t.Employee.FullName,
-                t.TicketNumber,
-                t.TicketType,
-                t.Subject,
-                t.Description,
-                t.AssignedToEmployeeId,
-                t.AssignedTo,
-                t.CreatedAt,
-                t.ClosedAt,
-                t.UpdatedAt,
-                t.CurrentTaskEmployeeId,
-                StepCodes.Created,
-                t.MaintenanceDetail == null ? null : new MaintenanceDetailResponseDto(
-                    t.MaintenanceDetail.TicketId,
-                    t.MaintenanceDetail.AssetId,
-                    t.MaintenanceDetail.Asset.AssetTag,
-                    t.MaintenanceDetail.Description,
-                    t.MaintenanceDetail.RepairResult,
-                    t.MaintenanceDetail.HandlerNote,
-                    t.MaintenanceDetail.PartRequirement,
-                    t.MaintenanceDetail.ReplacementAssetId,
-                    t.MaintenanceDetail.ReplacementAsset != null
-                        ? t.MaintenanceDetail.ReplacementAsset.AssetTag
-                        : null,
-                    t.MaintenanceDetail.CreatedAt),
-                t.ProcurementDetails
-                    .Select(p => new ProcurementDetailResponseDto(
-                        p.TicketId,
-                        p.ItemId,
-                        p.Item != null ? p.Item.ItemCode : null,
-                        p.ItemCategoryId,
-                        p.ItemCategory.CategoryName,
-                        p.ItemName,
-                        p.Quantity,
-                        p.Price,
-                        p.Quantity * p.Price,
-                        p.CreatedAt))
-                    .ToList()))
-            .FirstOrDefaultAsync(ct)
-            ?? throw new NotFoundException(
-                $"Ticket {query.Id} was not found or you are not allowed to access it.");
+           .Where(t => t.Id == query.Id)
+           .Select(t => new TicketResponseDto(
+               t.Id,
+               t.ParentTicketId,
+               t.EmployeeId,
+               t.Employee.FullName,
+               t.TicketNumber,
+               t.TicketType,
+               t.Subject,
+               t.Description,
+               t.AssignedToEmployeeId,
+               t.AssignedTo,
+               t.CreatedAt,
+               t.ClosedAt,
+               t.UpdatedAt,
+               t.CurrentTaskEmployeeId,
+               StepCodes.Created,
+               t.MaintenanceDetail == null ? null : new MaintenanceDetailResponseDto(
+                   t.MaintenanceDetail.TicketId,
+                   t.MaintenanceDetail.AssetId,
+                   t.MaintenanceDetail.Asset.AssetTag,
+                   t.MaintenanceDetail.Description,
+                   t.MaintenanceDetail.RepairResult,
+                   t.MaintenanceDetail.HandlerNote,
+                   t.MaintenanceDetail.PartRequirement,
+                   t.MaintenanceDetail.ReplacementAssetId,
+                   t.MaintenanceDetail.ReplacementAsset != null
+                       ? t.MaintenanceDetail.ReplacementAsset.AssetTag
+                       : null,
+                   t.MaintenanceDetail.CreatedAt),
+               t.ProcurementDetails
+                   .Select(p => new ProcurementDetailResponseDto(
+                       p.TicketId,
+                       p.ItemId,
+                       p.Item != null ? p.Item.ItemCode : null,
+                       p.ItemCategoryId,
+                       p.ItemCategory.CategoryName,
+                       p.ItemName,
+                       p.Quantity,
+                       p.Price,
+                       p.Quantity * p.Price,
+                       p.CreatedAt))
+                   .ToList()))
+           .FirstAsync(ct);
 
-        var currentStep =
-            await tickets.GetCurrentStepAsync(query.Id, ct)
-            ?? StepCodes.Created;
+        var historyItems = await history.GetHistoryAsync(query.Id, ct);
 
-        return dto with { CurrentStep = currentStep };
+        return dto with { CurrentStep = currentStep, History = historyItems };
+    }
+
+    private async Task<int?> GetStepLevelAsync(byte ticketType, string stepCode, CancellationToken ct)
+    {
+        if (stepCode == StepCodes.Created)
+            return StepLevels.Requester;
+
+        return await workflowSteps.QueryNoTracking()
+            .Where(s => s.StepCode == stepCode
+                     && s.Workflow.TicketType == ticketType
+                     && s.Workflow.IsActive)
+            .Select(s => s.Level)
+            .FirstOrDefaultAsync(ct);
     }
 }

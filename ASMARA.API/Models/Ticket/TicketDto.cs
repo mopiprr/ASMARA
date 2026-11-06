@@ -62,10 +62,12 @@ public record TicketResponseDto(
 );
 
 public record TicketWorkflowHistoryDto(
+    string? Action,   
+    string ActionLabel, 
     string FromStep,
     string ToStep,
     Guid EmployeeId,
-    string? EmployeeName,
+    string? EmployeeName, 
     string? Note,
     DateTime CreatedAt
 );
