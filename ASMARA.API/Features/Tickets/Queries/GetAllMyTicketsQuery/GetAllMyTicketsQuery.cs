@@ -74,6 +74,7 @@ public class GetAllMyTicketsQueryHandler(ITicketRepository tickets, IWorkflowSte
                 x.Subject,
                 x.CreatedAt,
                 x.CurrentStep,
+                x.TicketType,
                 steps.Where(s => s.StepCode == x.CurrentStep
                               && s.Workflow.TicketType == x.TicketType
                               && s.Workflow.IsActive)
