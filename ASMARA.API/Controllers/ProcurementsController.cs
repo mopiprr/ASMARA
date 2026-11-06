@@ -4,7 +4,6 @@ using ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
 using ASMARA.API.Features.Procurement.Commands.ReceiveProcurementGoods;
 using ASMARA.API.Features.Procurement.Commands.ResubmitProcurementTicket;
 using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
-using ASMARA.API.Features.Procurement.Queries.GetProcurementTickets;
 using ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 using ASMARA.API.Models.Ticket;
 using ASMARA.API.Services.TicketFlow;
@@ -19,16 +18,6 @@ namespace ASMARA.API.Controllers;
 [Authorize]
 public class ProcurementsController(ISender sender) : ControllerBase
 {
-    [HttpGet]
-    public async Task<ActionResult<List<TicketResponseDto>>> GetAll(
-        CancellationToken ct)
-    {
-        var result = await sender.Send(
-            new GetProcurementTicketsQuery(), ct);
-
-        return Ok(result);
-    }
-
     [HttpPost]
     public async Task<ActionResult<TicketResponseDto>> Create(
         // [FromBody] CreateTicketProcurementDto request,
@@ -88,7 +77,6 @@ public class ProcurementsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{id:guid}/resubmit")]
-    [HttpPut("{id:guid}/resubmit")]
     public async Task<ActionResult<TransitionResult>> Resubmit(
         Guid id,
         [FromBody] ResubmitProcurementTicketRequestDto request,
