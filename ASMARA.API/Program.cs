@@ -1,5 +1,6 @@
 
 using ASMARA.API.Common.ExceptionHandlers;
+using ASMARA.API.Common.Json;
 using ASMARA.API.Data;
 using ASMARA.API.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -26,8 +27,8 @@ try
     })
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.Converters.Add(
-            new JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
     });
 
     // Application Services

@@ -1,4 +1,7 @@
-﻿using ASMARA.API.Features.Dashboard.Queries.GetDashboardSummary;
+﻿using ASMARA.API.Common.Paging;
+using ASMARA.API.Features.Dashboard.Queries.GetDashboardSummary;
+using ASMARA.API.Features.Dashboard.Queries.GetMyActivityTickets;
+using ASMARA.API.Models.Dashboard;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,14 +11,8 @@ namespace ASMARA.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DashboardController : ControllerBase
+public class DashboardController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public DashboardController(ISender sender)
-    {
-        _sender = sender;
-    }
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(
@@ -53,8 +50,12 @@ public class DashboardController : ControllerBase
             roles
         );
 
-        var result = await _sender.Send(query, cancellationToken);
+        var result = await sender.Send(query, cancellationToken);
 
         return Ok(result);
     }
+
+    [HttpGet("my-activity")]
+    public async Task<ActionResult<PagedResult<ActivityTicketListItemDto>>> GetMyActivity([FromQuery] GetMyActivityTicketsQuery query, CancellationToken ct)
+        => Ok(await sender.Send(query, ct));
 }
