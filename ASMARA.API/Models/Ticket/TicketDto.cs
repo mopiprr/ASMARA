@@ -76,6 +76,7 @@ public record TicketListItemDto(
     string Subject,
     DateTime CreatedAt,
     string CurrentStep,
+    byte TicketType,
     string CurrentStepName);
 
 public record PendingTicketListItemDto(

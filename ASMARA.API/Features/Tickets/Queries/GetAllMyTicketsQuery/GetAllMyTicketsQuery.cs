@@ -94,6 +94,13 @@ public class GetAllMyTicketsQueryHandler(
                 x.Subject,
                 x.CreatedAt,
                 x.CurrentStep,
+                x.TicketType,
+                steps.Where(s => s.StepCode == x.CurrentStep
+                              && s.Workflow.TicketType == x.TicketType
+                              && s.Workflow.IsActive)
+                     .Select(s => s.Name)
+                     .FirstOrDefault() ?? "Created"))
+            .ToPagedResultAsync(request.Page, request.PageSize, ct: ct);
                 steps.Where(s =>
                         s.StepCode == x.CurrentStep &&
                         s.Workflow.TicketType == x.TicketType &&
