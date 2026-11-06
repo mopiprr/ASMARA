@@ -27,4 +27,24 @@ public class AssetRepository(AsmaraDbContext context) : Repository<Asset>(contex
 
         return affected == 1;
     }
+
+    public async Task<bool> RetireAsync(int assetId, AssetStatusEnum newStatus, CancellationToken ct = default)
+    {
+        var affected = await Set
+            .Where(a => a.Id == assetId && a.Status == (byte)AssetStatusEnum.UnderMaintenance)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Status, (byte)newStatus), ct);
+
+        return affected == 1;
+    }
+
+    public async Task<bool> TryAssignReplacementAsync(int assetId, Guid? ownerId, CancellationToken ct = default)
+    {
+        var affected = await Set
+            .Where(a => a.Id == assetId && a.Status == (byte)AssetStatusEnum.Available)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Status, (byte)AssetStatusEnum.InUse)
+                .SetProperty(a => a.EmployeeId, ownerId), ct);
+
+        return affected == 1;
+    }
 }

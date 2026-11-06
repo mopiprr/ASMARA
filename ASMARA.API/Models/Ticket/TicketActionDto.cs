@@ -66,3 +66,5 @@ public record CloseTicketDto(
 public record PartCheckRequestDto(bool Available, string? Note = null);
 
 public record SubmitRepairResultRequestDto(RepairResultEnum Result, string? HandlerNote = null, string? PartRequirement = null);
+
+public record ReplacementRequestDto(bool Available, int? ReplacementAssetId = null, string? Note = null);
