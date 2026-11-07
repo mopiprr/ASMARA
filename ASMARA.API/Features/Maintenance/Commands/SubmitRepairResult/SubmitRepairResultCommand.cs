@@ -12,15 +12,14 @@ namespace ASMARA.API.Features.Maintenance.Commands.SubmitRepairResult;
 
 public record SubmitRepairResultCommand(Guid TicketId, SubmitRepairResultRequestDto Request) : IRequest<TransitionResult>;
 
-public class SubmitRepairResultCommandHandler(IUnitOfWork uow, ITicketRepository tickets, ITicketFlowService ticketFlow,
-    IEmployeeRepository employees, ICurrentUser currentUser, IMediator mediator)
+public class SubmitRepairResultCommandHandler(IUnitOfWork uow, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
     : IRequestHandler<SubmitRepairResultCommand, TransitionResult>
 {
     public async Task<TransitionResult> Handle(SubmitRepairResultCommand command, CancellationToken ct)
     {
         var request = command.Request;
 
-        var ticket = await tickets.Query()
+        var ticket = await uow.Tickets.Query()
             .Include(t => t.Employee)
             .Include(t => t.MaintenanceDetail)
             .FirstOrDefaultAsync(t => t.Id == command.TicketId
@@ -57,7 +56,7 @@ public class SubmitRepairResultCommandHandler(IUnitOfWork uow, ITicketRepository
 
         await uow.SaveChangesAsync(ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket, 
             ticket.Employee, 

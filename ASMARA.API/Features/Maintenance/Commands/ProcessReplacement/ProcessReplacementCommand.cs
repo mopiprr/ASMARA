@@ -14,9 +14,7 @@ namespace ASMARA.API.Features.Maintenance.Commands.ProcessReplacement;
 
 public record ProcessReplacementCommand(Guid TicketId, ReplacementRequestDto Request) : IRequest<TransitionResult>;
 
-public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketRepository tickets, IAssetRepository assets, IProcurementDetailRepository procurementDetails,
-    IItemInventoryRepository itemInventories, IItemCategoryRepository itemCategories, ITicketFlowService ticketFlow,
-    IEmployeeRepository employees, ICurrentUser currentUser, IMediator mediator)
+public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
     : IRequestHandler<ProcessReplacementCommand, TransitionResult>
 {
     public async Task<TransitionResult> Handle(ProcessReplacementCommand command, CancellationToken ct)
@@ -25,7 +23,7 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketRepository
 
         var (ticket, result) = await uow.ExecuteInTransactionAsync(async ct =>
         {
-            var ticket = await tickets.Query()
+            var ticket = await uow.Tickets.Query()
                 .Include(t => t.Employee)
                 .Include(t => t.MaintenanceDetail)
                 .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == (byte)TicketTypeEnum.Maintenance, ct);
@@ -44,7 +42,7 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketRepository
             else
             {
                 var child = await ChildProcurementBuilder.BuildAsync(
-                    tickets, procurementDetails, itemInventories, itemCategories,
+                    uow.Tickets, uow.ProcurementDetails, uow.ItemInventories, uow.ItemCategories,
                     request.Subject!, request.Description, request.Items!, ct);
 
                 var childResult = await ticketFlow.CreateChildAsync(
@@ -58,7 +56,7 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketRepository
             return (ticket, result);
         }, ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
         var action = request.Available ? TicketActionEnum.ReplacementAvailable : TicketActionEnum.ReplacementUnavailable;
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket, 
@@ -73,18 +71,18 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketRepository
     private async Task RetireOldAssetAsync(int assetId, string fromStep, CancellationToken ct)
     {
         var status = fromStep == StepCodes.InventoryDispose ? AssetStatusEnum.Disposed : AssetStatusEnum.Archived;
-        if (!await assets.RetireAsync(assetId, status, ct))
+        if (!await uow.Assets.RetireAsync(assetId, status, ct))
             throw new BusinessRuleException($"Asset {assetId} is not under maintenance.");
     }
 
     private async Task AssignReplacementAsync(ASMARA.API.Entities.MaintenanceDetail detail, int replacementAssetId, CancellationToken ct)
     {
-        var oldOwnerId = await assets.QueryNoTracking()
+        var oldOwnerId = await uow.Assets.QueryNoTracking()
             .Where(a => a.Id == detail.AssetId)
             .Select(a => a.EmployeeId)
             .FirstOrDefaultAsync(ct);
 
-        if (!await assets.TryAssignReplacementAsync(replacementAssetId, oldOwnerId, ct))
+        if (!await uow.Assets.TryAssignReplacementAsync(replacementAssetId, oldOwnerId, ct))
             throw new BusinessRuleException($"Asset {replacementAssetId} is not available as a replacement.");
 
         detail.ReplacementAssetId = replacementAssetId;

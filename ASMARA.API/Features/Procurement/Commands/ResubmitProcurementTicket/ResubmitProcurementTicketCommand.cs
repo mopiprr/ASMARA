@@ -18,11 +18,6 @@ public record ResubmitProcurementTicketCommand(
     : IRequest<TransitionResult>;
 
 public class ResubmitProcurementTicketCommandHandler(
-    ITicketRepository tickets,
-    IProcurementDetailRepository procurementDetails,
-    IEmployeeRepository employees,
-    IItemCategoryRepository itemCategories,
-    IItemInventoryRepository itemInventories,
     ITicketFlowService ticketFlow,
     IUnitOfWork unitOfWork,
     ICurrentUser currentUser,
@@ -38,7 +33,7 @@ public class ResubmitProcurementTicketCommandHandler(
         var requesterId = currentUser.EmployeeId;
 
         // 1. Ambil tiket Procurement
-        var ticket = await tickets.Query()
+        var ticket = await unitOfWork.Tickets.Query()
             .Include(t => t.Employee)
             .FirstOrDefaultAsync(
                 t => t.Id == ticketId &&
@@ -59,7 +54,7 @@ public class ResubmitProcurementTicketCommandHandler(
         }
 
         // 3. Validasi current step
-        var currentStep = await tickets.GetCurrentStepAsync(
+        var currentStep = await unitOfWork.Tickets.GetCurrentStepAsync(
             ticketId, ct) ?? StepCodes.Created;
 
         if (currentStep != StepCodes.EmployeeRevision)
@@ -100,7 +95,7 @@ public class ResubmitProcurementTicketCommandHandler(
             // CASE A: Memilih barang dari master inventaris
             if (item.ItemId.HasValue)
             {
-                var inventoryItem = await itemInventories.GetByIdAsync(
+                var inventoryItem = await unitOfWork.ItemInventories.GetByIdAsync(
                     item.ItemId.Value, ct);
 
                 if (inventoryItem is null || !inventoryItem.IsActive)
@@ -139,7 +134,7 @@ public class ResubmitProcurementTicketCommandHandler(
 
                 var trimmedName = item.ItemName.Trim();
 
-                var duplicateInventory = await itemInventories.QueryNoTracking()
+                var duplicateInventory = await unitOfWork.ItemInventories.QueryNoTracking()
                     .FirstOrDefaultAsync(
                         i => i.ItemName.ToLower() == trimmedName.ToLower(),
                         ct);
@@ -158,7 +153,7 @@ public class ResubmitProcurementTicketCommandHandler(
                         $"Kategori barang wajib dipilih untuk pengajuan barang manual '{trimmedName}'.");
                 }
 
-                var category = await itemCategories.GetByIdAsync(
+                var category = await unitOfWork.ItemCategories.GetByIdAsync(
                     item.ItemCategoryId, ct);
 
                 if (category is null || !category.IsActive)
@@ -195,13 +190,13 @@ public class ResubmitProcurementTicketCommandHandler(
                 ticket.UpdatedAt = now;
 
                 // B. Hapus detail lama satu per satu
-                var oldDetails = await procurementDetails.Query()
+                var oldDetails = await unitOfWork.ProcurementDetails.Query()
                     .Where(p => p.TicketId == ticket.Id)
                     .ToListAsync(transactionCt);
 
                 foreach (var oldDetail in oldDetails)
                 {
-                    procurementDetails.Remove(oldDetail);
+                    unitOfWork.ProcurementDetails.Remove(oldDetail);
                 }
 
                 // C. Tambahkan detail barang baru
@@ -220,7 +215,7 @@ public class ResubmitProcurementTicketCommandHandler(
                         CreatedAt = now
                     };
 
-                    procurementDetails.Add(detail);
+                    unitOfWork.ProcurementDetails.Add(detail);
                     newDetails.Add(detail);
                 }
 
@@ -245,7 +240,7 @@ public class ResubmitProcurementTicketCommandHandler(
             }, ct);
 
         // 6. Kirim notifikasi perubahan status
-        var actor = await employees.GetByIdAsync(
+        var actor = await unitOfWork.Employees.GetByIdAsync(
             requesterId, ct) ?? ticket.Employee;
 
         await mediator.Publish(

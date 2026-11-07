@@ -12,14 +12,14 @@ public record GetMyActivityTicketsQuery(TicketTypeEnum? Type = null, string? Sea
     DateOnly? ToDate = null, int Page = 1, int PageSize = 10)
     : IRequest<PagedResult<ActivityTicketListItemDto>>;
 
-public class GetMyActivityTicketsQueryHandler(ITicketRepository tickets, IWorkflowStepRepository workflowSteps, ICurrentUser currentUser)
+public class GetMyActivityTicketsQueryHandler(IUnitOfWork uow, ICurrentUser currentUser)
     : IRequestHandler<GetMyActivityTicketsQuery, PagedResult<ActivityTicketListItemDto>>
 {
     public async Task<PagedResult<ActivityTicketListItemDto>> Handle(GetMyActivityTicketsQuery request, CancellationToken ct)
     {
         var me = currentUser.EmployeeId;
 
-        var query = tickets.QueryNoTracking()
+        var query = uow.Tickets.QueryNoTracking()
             .Where(t => t.EmployeeId != me
                      && t.TicketWorkflowLogs.Any(l => l.EmployeeId == me));
 
@@ -53,7 +53,7 @@ public class GetMyActivityTicketsQueryHandler(ITicketRepository tickets, IWorkfl
                 && l.CreatedAt < toUtcExclusive));
         }
 
-        var steps = workflowSteps.QueryNoTracking();
+        var steps = uow.WorkflowSteps.QueryNoTracking();
 
         var page = await query
             .Select(t => new

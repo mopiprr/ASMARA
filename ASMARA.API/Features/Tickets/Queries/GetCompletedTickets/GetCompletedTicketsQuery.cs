@@ -20,14 +20,13 @@ public record GetCompletedTicketsQuery(
     : IRequest<PagedResult<CompletedTicketListItemDto>>;
 
 public class GetCompletedTicketsQueryHandler(
-    ITicketRepository tickets,
-    IWorkflowStepRepository workflowSteps,
+    IUnitOfWork uow,
     ICurrentUser currentUser)
     : IRequestHandler<GetCompletedTicketsQuery, PagedResult<CompletedTicketListItemDto>>
 {
     public async Task<PagedResult<CompletedTicketListItemDto>> Handle(GetCompletedTicketsQuery request, CancellationToken ct)
     {
-        var query = tickets.QueryNoTracking()
+        var query = uow.Tickets.QueryNoTracking()
             .Where(t => t.ClosedAt != null);
 
         if (request.OnlyMyTickets)
@@ -60,7 +59,7 @@ public class GetCompletedTicketsQueryHandler(
             _ => request.Desc ? query.OrderByDescending(x => x.ClosedAt ?? x.CreatedAt) : query.OrderByDescending(x => x.ClosedAt ?? x.CreatedAt)
         };
 
-        var steps = workflowSteps.QueryNoTracking();
+        var steps = uow.WorkflowSteps.QueryNoTracking();
 
         var projected = query.Select(t => new
         {

@@ -8,11 +8,11 @@ namespace ASMARA.API.Features.Catalog.Queries.GetAssetsForMaintenance;
 
 public record GetAssetsForMaintenanceQuery : IRequest<IReadOnlyCollection<MaintenanceAssetOptionDto>>;
 
-public class GetAssetsForMaintenanceQueryHandler(IAssetRepository assets, ICurrentUser currentUser)
+public class GetAssetsForMaintenanceQueryHandler(IUnitOfWork uow, ICurrentUser currentUser)
     : IRequestHandler<GetAssetsForMaintenanceQuery, IReadOnlyCollection<MaintenanceAssetOptionDto>>
 {
     public async Task<IReadOnlyCollection<MaintenanceAssetOptionDto>> Handle(GetAssetsForMaintenanceQuery request, CancellationToken cancellationToken)
-        => await assets.GetAllAvailableAssetForMaintenance(currentUser.EmployeeId)   
+        => await uow.Assets.GetAllAvailableAssetForMaintenance(currentUser.EmployeeId)   
             .AsNoTracking()
             .OrderBy(a => a.EmployeeId == null)   
             .ThenBy(a => a.AssetTag)

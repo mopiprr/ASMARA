@@ -12,14 +12,7 @@ namespace ASMARA.API.Features.Maintenance.Commands.SendReplacement;
 
 public record SendReplacementCommand(Guid TicketId, SendReplacementRequestDto Request) : IRequest<TransitionResult>;
 
-public class SendReplacementCommandHandler(
-    IUnitOfWork uow,
-    ITicketRepository tickets,
-    IAssetRepository assets,
-    ITicketFlowService ticketFlow,
-    IEmployeeRepository employees,
-    ICurrentUser currentUser,
-    IMediator mediator)
+public class SendReplacementCommandHandler(IUnitOfWork uow, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
     : IRequestHandler<SendReplacementCommand, TransitionResult>
 {
     public async Task<TransitionResult> Handle(SendReplacementCommand command, CancellationToken ct)
@@ -28,7 +21,7 @@ public class SendReplacementCommandHandler(
 
         var (ticket, result) = await uow.ExecuteInTransactionAsync(async ct =>
         {
-            var ticket = await tickets.Query()
+            var ticket = await uow.Tickets.Query()
                 .Include(t => t.Employee)
                 .Include(t => t.MaintenanceDetail)
                 .FirstOrDefaultAsync(t => t.Id == command.TicketId
@@ -42,12 +35,12 @@ public class SendReplacementCommandHandler(
             if (result.FromStep != StepCodes.InventorySendReplacement)
                 throw new TicketStateException("send-replacement is only for step INVENTORY_SEND_REPLACEMENT.");
 
-            var oldOwnerId = await assets.QueryNoTracking()
+            var oldOwnerId = await uow.Assets.QueryNoTracking()
                 .Where(a => a.Id == detail.AssetId)
                 .Select(a => a.EmployeeId)
                 .FirstOrDefaultAsync(ct);
 
-            if (!await assets.TryAssignReplacementAsync(request.ReplacementAssetId, oldOwnerId, ct))
+            if (!await uow.Assets.TryAssignReplacementAsync(request.ReplacementAssetId, oldOwnerId, ct))
                 throw new BusinessRuleException($"Asset {request.ReplacementAssetId} is not available as a replacement.");
 
             detail.ReplacementAssetId = request.ReplacementAssetId;
@@ -56,9 +49,13 @@ public class SendReplacementCommandHandler(
             return (ticket, result);
         }, ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
         await mediator.Publish(new TicketStatusChangedEvent(
-            ticket, ticket.Employee, actor, TicketActionEnum.Send.ToString(), request.Note), ct);
+            ticket, 
+            ticket.Employee, 
+            actor, 
+            TicketActionEnum.Send.ToString(), 
+            request.Note), ct);
 
         return result;
     }

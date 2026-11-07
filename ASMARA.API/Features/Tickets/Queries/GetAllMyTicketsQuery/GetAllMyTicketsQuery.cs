@@ -18,9 +18,7 @@ public record GetAllMyTicketsQuery(
     bool Desc = false)
     : IRequest<PagedResult<TicketListItemDto>>;
 
-public class GetAllMyTicketsQueryHandler(
-    ITicketRepository tickets,
-    IWorkflowStepRepository workflowSteps,
+public class GetAllMyTicketsQueryHandler(IUnitOfWork uow,
     ICurrentUser currentUser)
     : IRequestHandler<GetAllMyTicketsQuery, PagedResult<TicketListItemDto>>
 {
@@ -30,7 +28,7 @@ public class GetAllMyTicketsQueryHandler(
     {
         var employeeId = currentUser.EmployeeId;
 
-        var query = tickets.QueryNoTracking()
+        var query = uow.Tickets.QueryNoTracking()
             .Where(t => t.EmployeeId == employeeId);
 
         if (request.Type.HasValue)
@@ -85,7 +83,7 @@ public class GetAllMyTicketsQueryHandler(
                 : projected.OrderBy(x => x.CreatedAt)
         };
 
-        var steps = workflowSteps.QueryNoTracking();
+        var steps = uow.WorkflowSteps.QueryNoTracking();
 
         return await projected
             .Select(x => new TicketListItemDto(

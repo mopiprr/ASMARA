@@ -7,12 +7,12 @@ namespace ASMARA.API.Features.Catalog.Queries.GetItemCategories;
 
 public record GetItemCategoriesQuery(bool OnlyActive = true) : IRequest<List<ItemCategoryResponseDto>>;
 
-public class GetItemCategoriesQueryHandler(IItemCategoryRepository itemCategories)
+public class GetItemCategoriesQueryHandler(IUnitOfWork uow)
     : IRequestHandler<GetItemCategoriesQuery, List<ItemCategoryResponseDto>>
 {
     public async Task<List<ItemCategoryResponseDto>> Handle(GetItemCategoriesQuery request, CancellationToken ct)
     {
-        var query = itemCategories.QueryNoTracking().AsQueryable();
+        var query = uow.ItemCategories.QueryNoTracking().AsQueryable();
 
         // Hanya mengambil kategori yang IsActive = true
         if (request.OnlyActive)

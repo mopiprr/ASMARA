@@ -16,9 +16,7 @@ public record GetTicketStatisticsQuery(
     : IRequest<TicketStatisticsDto>;
 
 public class GetTicketStatisticsQueryHandler(
-    ITicketRepository tickets,
-    IWorkflowStepRepository workflowSteps,
-    IEmployeeRepository employees,
+    IUnitOfWork uow,
     ICurrentUser currentUser)
     : IRequestHandler<GetTicketStatisticsQuery, TicketStatisticsDto>
 {
@@ -30,7 +28,7 @@ public class GetTicketStatisticsQueryHandler(
         var roles = currentUser.Roles;
         var roleLevels = LevelRoleMap.LevelsFor(roles);
 
-        var baseQuery = tickets.QueryNoTracking();
+        var baseQuery = uow.Tickets.QueryNoTracking();
 
         if (request.Type.HasValue)
         {
@@ -50,7 +48,7 @@ public class GetTicketStatisticsQueryHandler(
             baseQuery = baseQuery.Where(t => t.CreatedAt < nextDayUtc);
         }
 
-        var subordinateIds = await employees.QueryNoTracking()
+        var subordinateIds = await uow.Employees.QueryNoTracking()
             .Where(e => e.ManagerId == employeeId)
             .Select(e => e.Id)
             .ToListAsync(ct);
@@ -58,7 +56,7 @@ public class GetTicketStatisticsQueryHandler(
         var subordinateIdSet = new HashSet<Guid>(subordinateIds);
 
         // Ambil workflowstep aktif
-        var activeSteps = await workflowSteps.QueryNoTracking()
+        var activeSteps = await uow.WorkflowSteps.QueryNoTracking()
             .Where(s => s.Workflow.IsActive)
             .Select(s => new
             {
@@ -189,7 +187,7 @@ public class GetTicketStatisticsQueryHandler(
             employeeId,
             roles,
             action.Value,
-            employees,
+            uow.Employees,
             ct);
     }
 }

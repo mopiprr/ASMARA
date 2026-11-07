@@ -14,16 +14,7 @@ namespace ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
 // public record CreateProcurementTicketCommand(CreateTicketProcurementDto Request) : IRequest<Guid>;
 public record CreateProcurementTicketCommand(CreateProcurementTicketRequestDto Request) : IRequest<Guid>;
 
-public class CreateProcurementTicketCommandHandler(
-    ITicketRepository tickets,
-    IProcurementDetailRepository procurementDetails,
-    IEmployeeRepository employees,
-    IItemCategoryRepository itemCategories,
-    IItemInventoryRepository itemInventories,
-    ITicketFlowService ticketFlow,
-    IUnitOfWork unitOfWork,
-    ICurrentUser currentUser,
-    IMediator mediator,
+public class CreateProcurementTicketCommandHandler(IUnitOfWork unitOfWork, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator,
     ILogger<CreateProcurementTicketCommandHandler> logger) : IRequestHandler<CreateProcurementTicketCommand, Guid>
 {
     public async Task<Guid> Handle(CreateProcurementTicketCommand command, CancellationToken ct)
@@ -40,7 +31,7 @@ public class CreateProcurementTicketCommandHandler(
                 throw new BusinessRuleException($"Jumlah barang '{item.ItemName ?? "Item"}' harus lebih besar dari 0.");
             }
 
-            if (item.Price < 0)
+            if (item.Price <= 0)
             {
                 throw new BusinessRuleException($"Harga estimasi barang '{item.ItemName ?? "Item"}' tidak boleh negatif.");
             }
@@ -48,7 +39,7 @@ public class CreateProcurementTicketCommandHandler(
             // KASUS A: Memilih barang yang sudah ada di inventaris (ItemId terisi)
             if (item.ItemId.HasValue)
             {
-                var inventoryItem = await itemInventories.GetByIdAsync(item.ItemId.Value, ct);
+                var inventoryItem = await unitOfWork.ItemInventories.GetByIdAsync(item.ItemId.Value, ct);
                 if (inventoryItem is null || !inventoryItem.IsActive)
                 {
                     throw new BusinessRuleException($"Barang inventaris dengan ID {item.ItemId.Value} tidak ditemukan atau sudah tidak aktif.");
@@ -83,7 +74,7 @@ public class CreateProcurementTicketCommandHandler(
                 var trimmedName = item.ItemName.Trim();
 
                 // Validate no duplicate
-                var duplicateInventory = await itemInventories.QueryNoTracking()
+                var duplicateInventory = await unitOfWork.ItemInventories.QueryNoTracking()
                     .FirstOrDefaultAsync(i => i.ItemName.ToLower() == trimmedName.ToLower(), ct);
 
                 if (duplicateInventory is not null)
@@ -100,7 +91,7 @@ public class CreateProcurementTicketCommandHandler(
                 }
 
                 // var category = await itemCategories.GetByIdAsync(item.ItemCategoryId.Value, ct);
-                var category = await itemCategories.GetByIdAsync(item.ItemCategoryId, ct);
+                var category = await unitOfWork.ItemCategories.GetByIdAsync(item.ItemCategoryId, ct);
                 // if (category is null || !category.IsActive)
                 // {
                 //     throw new BusinessRuleException($"Kategori barang dengan ID {item.ItemCategoryId.Value} tidak valid atau tidak aktif.");
@@ -124,7 +115,7 @@ public class CreateProcurementTicketCommandHandler(
         var (ticket, detailsList, flowResult) = await unitOfWork.ExecuteInTransactionAsync(async transactionCt =>
         {
             // Generate Nomor Tiket Urut Harian dari Repository (Format: PRC-ddMMyy-XXX, reset harian)
-            var ticketNumber = await tickets.GenerateTicketNumberAsync(TicketTypeEnum.Procurement, transactionCt);
+            var ticketNumber = await unitOfWork.Tickets.GenerateTicketNumberAsync(TicketTypeEnum.Procurement, transactionCt);
 
             var now = DateTime.UtcNow;
             var newTicket = new Ticket
@@ -152,11 +143,11 @@ public class CreateProcurementTicketCommandHandler(
                     ItemId = v.ItemId,
                     CreatedAt = now
                 };
-                procurementDetails.Add(detail);
+                unitOfWork.ProcurementDetails.Add(detail);
                 details.Add(detail);
             }
 
-            tickets.Add(newTicket);
+            unitOfWork.Tickets.Add(newTicket);
 
             var logNote = !string.IsNullOrWhiteSpace(request.Description)
                 ? request.Description.Trim()
@@ -175,15 +166,15 @@ public class CreateProcurementTicketCommandHandler(
         }, ct);
 
         // 6. Opsi 2: Kirim Notifikasi Email setelah simpan DB sukses
-        var requester = await employees.GetByIdAsync(ticket.EmployeeId, ct);
+        var requester = await unitOfWork.Employees.GetByIdAsync(ticket.EmployeeId, ct);
         Employee? manager = null;
         if (flowResult.NextTaskEmployeeId.HasValue)
         {
-            manager = await employees.GetByIdAsync(flowResult.NextTaskEmployeeId.Value, ct);
+            manager = await unitOfWork.Employees.GetByIdAsync(flowResult.NextTaskEmployeeId.Value, ct);
         }
         else if (requester?.ManagerId is not null)
         {
-            manager = await employees.GetByIdAsync(requester.ManagerId.Value, ct);
+            manager = await unitOfWork.Employees.GetByIdAsync(requester.ManagerId.Value, ct);
         }
 
         if (requester is not null)

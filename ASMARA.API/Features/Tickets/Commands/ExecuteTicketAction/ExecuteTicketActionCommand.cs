@@ -13,11 +13,9 @@ public record ExecuteTicketActionCommand(Guid TicketId, TicketTypeEnum ExpectedT
     : IRequest<TransitionResult>;
  
 public class ExecuteTicketActionCommandHandler(
-    ITicketRepository tickets,
     ITicketFlowService ticketFlow,
     IUnitOfWork uow,
     IMediator mediator,
-    IEmployeeRepository employees,
     ICurrentUser currentUser) 
     : IRequestHandler<ExecuteTicketActionCommand, TransitionResult>
 {
@@ -36,7 +34,7 @@ public class ExecuteTicketActionCommandHandler(
             throw new InvalidOperationException($"{command.Action} ({command.ExpectedType}) has side effects; use its dedicated command.");
 
         var type = (byte)command.ExpectedType;
-        var ticket = await tickets.Query()
+        var ticket = await uow.Tickets.Query()
             .Include(t => t.Employee)
             .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == type, ct);
 
@@ -50,7 +48,7 @@ public class ExecuteTicketActionCommandHandler(
 
         await uow.SaveChangesAsync(ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
 
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket,

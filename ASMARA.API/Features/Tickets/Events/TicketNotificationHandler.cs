@@ -9,16 +9,14 @@ namespace ASMARA.API.Features.Tickets.Events;
 
 public class TicketNotificationHandler(
     IEmailService emailService,
-    IEmployeeRepository employeeRepository,
-    IProcurementDetailRepository procurementDetailRepository,
-    IMaintenanceDetailRepository maintenanceDetailRepository,
+    IUnitOfWork uow,
     ILogger<TicketNotificationHandler> logger
 ) : INotificationHandler<TicketCreatedEvent>,
     INotificationHandler<TicketStatusChangedEvent>
 {
     private async Task<List<string>> GetEmailsByRoleAsync(string roleCode, CancellationToken ct)
     {
-        return await employeeRepository.QueryNoTracking()
+        return await uow.Employees.QueryNoTracking()
             .Where(e => e.Account != null && e.Account.Roles.Any(r => r.RoleCode == roleCode))
             .Select(e => e.Email)
             .ToListAsync(ct);
@@ -30,8 +28,8 @@ public class TicketNotificationHandler(
         var ticket = notification.Ticket;
         var requester = notification.Requester;
         var manager = notification.DirectManager
-            ?? (ticket.CurrentTaskEmployeeId.HasValue ? await employeeRepository.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
-            ?? (requester.ManagerId.HasValue ? await employeeRepository.GetByIdAsync(requester.ManagerId.Value, ct) : null);
+            ?? (ticket.CurrentTaskEmployeeId.HasValue ? await uow.Employees.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
+            ?? (requester.ManagerId.HasValue ? await uow.Employees.GetByIdAsync(requester.ManagerId.Value, ct) : null);
 
         if (manager == null || string.IsNullOrWhiteSpace(manager.Email))
         {
@@ -42,7 +40,7 @@ public class TicketNotificationHandler(
         if (ticket.TicketType == (byte)TicketTypeEnum.Procurement)
         {
             var items = notification.ProcurementItems ?? 
-                await procurementDetailRepository.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
+                await uow.ProcurementDetails.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
 
             var body = EmailTemplates.Procurement(
                 recipientName: manager.FullName,
@@ -59,7 +57,7 @@ public class TicketNotificationHandler(
         {
             var detail = notification.MaintenanceDetail?.Asset != null
                 ? notification.MaintenanceDetail
-                : await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                : await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
 
             var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
             var problemDesc = detail?.Description ?? ticket.Description ?? "-";
@@ -89,15 +87,15 @@ public class TicketNotificationHandler(
         switch (action)
         {
             case "create":
-                var createManager = (ticket.CurrentTaskEmployeeId.HasValue ? await employeeRepository.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
-                    ?? (requester.ManagerId.HasValue ? await employeeRepository.GetByIdAsync(requester.ManagerId.Value, ct) : null);
+                var createManager = (ticket.CurrentTaskEmployeeId.HasValue ? await uow.Employees.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
+                    ?? (requester.ManagerId.HasValue ? await uow.Employees.GetByIdAsync(requester.ManagerId.Value, ct) : null);
 
                 if (createManager != null && !string.IsNullOrWhiteSpace(createManager.Email))
                 {
                     if (ticket.TicketType == (byte)TicketTypeEnum.Procurement)
                     {
                         var items = notification.ProcurementItems ?? 
-                            await procurementDetailRepository.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
+                            await uow.ProcurementDetails.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
 
                         var body = EmailTemplates.Procurement(
                             recipientName: createManager.FullName,
@@ -113,7 +111,7 @@ public class TicketNotificationHandler(
                     else if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
                     {
                         var detail = notification.MaintenanceDetail ??
-                            await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                            await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
 
                         var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
                         var problemDesc = detail?.Description ?? ticket.Description ?? "-";
@@ -157,7 +155,7 @@ public class TicketNotificationHandler(
                     if (financeEmails.Count == 0) financeEmails = ["finance.team@asmara.local"];
 
                     var items = notification.ProcurementItems ?? 
-                        await procurementDetailRepository.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
+                        await uow.ProcurementDetails.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
 
                     var financeBody = EmailTemplates.Procurement(
                         recipientName: "Tim Finance",
@@ -176,7 +174,7 @@ public class TicketNotificationHandler(
                     if (itSupportEmails.Count == 0) itSupportEmails = ["itsupport.team@asmara.local"];
 
                     var detail = notification.MaintenanceDetail ??
-                        await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                        await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
 
                     var extraInfo = $"<strong>Pemohon:</strong> {requester.FullName}<br><strong>Asset Tag:</strong> {detail?.Asset?.AssetTag ?? "Aset Terdaftar"}";
                     var itBody = EmailTemplates.Notification(
@@ -226,11 +224,11 @@ public class TicketNotificationHandler(
 
             case "assignhandler":
                 var assignedTech = ticket.AssignedToEmployeeId.HasValue
-                    ? await employeeRepository.GetByIdAsync(ticket.AssignedToEmployeeId.Value, ct)
+                    ? await uow.Employees.GetByIdAsync(ticket.AssignedToEmployeeId.Value, ct)
                     : null;
 
                 var maintDetail = notification.MaintenanceDetail ??
-                    await maintenanceDetailRepository.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                    await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
 
                 var assetInfo = maintDetail?.Asset?.AssetTag ?? "Aset Terdaftar";
                 var complaint = maintDetail?.Description ?? ticket.Description ?? "-";
@@ -264,13 +262,13 @@ public class TicketNotificationHandler(
                 break;
 
             case "resubmit":
-                var resubmitManager = (ticket.CurrentTaskEmployeeId.HasValue ? await employeeRepository.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
-                    ?? (requester.ManagerId.HasValue ? await employeeRepository.GetByIdAsync(requester.ManagerId.Value, ct) : null);
+                var resubmitManager = (ticket.CurrentTaskEmployeeId.HasValue ? await uow.Employees.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
+                    ?? (requester.ManagerId.HasValue ? await uow.Employees.GetByIdAsync(requester.ManagerId.Value, ct) : null);
 
                 if (resubmitManager != null && !string.IsNullOrWhiteSpace(resubmitManager.Email))
                 {
                     var items = notification.ProcurementItems?.ToList() ?? 
-                        await procurementDetailRepository.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
+                        await uow.ProcurementDetails.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
 
                     var resubmitNote = !string.IsNullOrWhiteSpace(notification.Note)
                         ? notification.Note

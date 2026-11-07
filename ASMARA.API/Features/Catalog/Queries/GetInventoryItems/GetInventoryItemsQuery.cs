@@ -11,12 +11,12 @@ public record GetInventoryItemsQuery(
     bool OnlyActive = true
 ) : IRequest<List<ItemInventoryResponseDto>>;
 
-public class GetInventoryItemsQueryHandler(IItemInventoryRepository itemInventories)
+public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
     : IRequestHandler<GetInventoryItemsQuery, List<ItemInventoryResponseDto>>
 {
     public async Task<List<ItemInventoryResponseDto>> Handle(GetInventoryItemsQuery request, CancellationToken ct)
     {
-        var query = itemInventories.QueryNoTracking()
+        var query = uow.ItemInventories.QueryNoTracking()
             .Include(i => i.ItemCategory)
             .AsQueryable();
 

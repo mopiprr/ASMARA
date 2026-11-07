@@ -13,9 +13,7 @@ namespace ASMARA.API.Features.Maintenance.Commands.OrderPart;
 
 public record OrderPartCommand(Guid TicketId, OrderPartRequestDto Request) : IRequest<ChildTicketResult>;
 
-public class OrderPartCommandHandler(IUnitOfWork uow, ITicketRepository tickets, IProcurementDetailRepository procurementDetails,
-    IItemInventoryRepository itemInventories, IItemCategoryRepository itemCategories, ITicketFlowService ticketFlow,
-    IEmployeeRepository employees, ICurrentUser currentUser, IMediator mediator)
+public class OrderPartCommandHandler(IUnitOfWork uow, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
     : IRequestHandler<OrderPartCommand, ChildTicketResult>
 {
     public async Task<ChildTicketResult> Handle(OrderPartCommand command, CancellationToken ct)
@@ -24,14 +22,14 @@ public class OrderPartCommandHandler(IUnitOfWork uow, ITicketRepository tickets,
 
         var (ticket, result) = await uow.ExecuteInTransactionAsync(async ct =>
         {
-            var ticket = await tickets.Query()
+            var ticket = await uow.Tickets.Query()
                 .Include(t => t.Employee)
                 .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == (byte)TicketTypeEnum.Maintenance, ct);
             if (ticket == null)
                 throw new NotFoundException($"Maintenance ticket {command.TicketId} was not found.");
 
             var child = await ChildProcurementBuilder.BuildAsync(
-                tickets, procurementDetails, itemInventories, itemCategories,
+                uow.Tickets, uow.ProcurementDetails, uow.ItemInventories, uow.ItemCategories,
                 request.Subject, request.Description, request.Items, ct);
 
             var result = await ticketFlow.CreateChildAsync(
@@ -41,9 +39,13 @@ public class OrderPartCommandHandler(IUnitOfWork uow, ITicketRepository tickets,
             return (ticket, result);
         }, ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
         await mediator.Publish(new TicketStatusChangedEvent(
-            ticket, ticket.Employee, actor, TicketActionEnum.OrderPart.ToString(), request.Note), ct);
+            ticket, 
+            ticket.Employee, 
+            actor, 
+            TicketActionEnum.OrderPart.ToString(), 
+            request.Note), ct);
 
         return result;
     }

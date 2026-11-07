@@ -19,9 +19,7 @@ public record GetPendingTicketsQuery(
     : IRequest<PagedResult<PendingTicketListItemDto>>;
 
 public class GetPendingTicketsQueryHandler(
-    ITicketRepository tickets,
-    IWorkflowStepRepository workflowSteps,
-    IEmployeeRepository employees,
+    IUnitOfWork uow,
     ICurrentUser currentUser)
     : IRequestHandler<GetPendingTicketsQuery, PagedResult<PendingTicketListItemDto>>
 {
@@ -34,7 +32,7 @@ public class GetPendingTicketsQueryHandler(
         var roleLevels = LevelRoleMap.LevelsFor(roles);
 
         // Ambil tiket yang masih aktif.
-        var baseQuery = tickets.QueryNoTracking()
+        var baseQuery = uow.Tickets.QueryNoTracking()
             .Where(t => t.ClosedAt == null);
 
         if (request.Type.HasValue)
@@ -57,7 +55,7 @@ public class GetPendingTicketsQueryHandler(
         baseQuery = ApplySorting(baseQuery, request);
 
         // Ambil workflow step aktif untuk menentukan level setiap tiket.
-        var activeSteps = await workflowSteps.QueryNoTracking()
+        var activeSteps = await uow.WorkflowSteps.QueryNoTracking()
             .Where(s => s.Workflow.IsActive)
             .Select(s => new
             {
@@ -128,12 +126,12 @@ public class GetPendingTicketsQueryHandler(
         }
 
         // Jika tidak ada tiket yang dapat diakses, hasil tetap kosong.
-        var resultQuery = tickets.QueryNoTracking()
+        var resultQuery = uow.Tickets.QueryNoTracking()
             .Where(t => authorizedIds.Contains(t.Id));
 
         resultQuery = ApplySorting(resultQuery, request);
 
-        var steps = workflowSteps.QueryNoTracking();
+        var steps = uow.WorkflowSteps.QueryNoTracking();
 
         var projected = resultQuery.Select(t => new
         {
@@ -203,7 +201,7 @@ public class GetPendingTicketsQueryHandler(
             employeeId,
             roles,
             action.Value,
-            employees,
+            uow.Employees,
             ct);
     }
 

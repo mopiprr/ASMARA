@@ -7,11 +7,11 @@ namespace ASMARA.API.Features.Employees.Queries.GetMaintenanceHandlers;
 
 public record GetMaintenanceHandlersQuery : IRequest<IReadOnlyList<HandlerOptionDto>>;
 
-public class GetMaintenanceHandlersQueryHandler(IEmployeeRepository employees)
+public class GetMaintenanceHandlersQueryHandler(IUnitOfWork uow)
     : IRequestHandler<GetMaintenanceHandlersQuery, IReadOnlyList<HandlerOptionDto>>
 {
     public async Task<IReadOnlyList<HandlerOptionDto>> Handle(GetMaintenanceHandlersQuery request, CancellationToken ct)
-        => await employees.GetActiveHandlers()
+        => await uow.Employees.GetActiveHandlers()
             .AsNoTracking()
             .OrderBy(e => e.FullName)
             .Select(e => new HandlerOptionDto(e.Id, e.EmployeeNumber, e.FullName))

@@ -11,15 +11,14 @@ namespace ASMARA.API.Features.Maintenance.Commands.RejectMaintenanceTicket;
 
 public record RejectMaintenanceTicketCommand(Guid TicketId, string? Note) : IRequest<TransitionResult>;
 
-public class RejectMaintenanceTicketCommandHandler(IUnitOfWork uow, ITicketRepository tickets, IAssetRepository assets, 
-    ITicketFlowService ticketFlow, IEmployeeRepository employees, ICurrentUser currentUser, IMediator mediator)
+public class RejectMaintenanceTicketCommandHandler(IUnitOfWork uow, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
     : IRequestHandler<RejectMaintenanceTicketCommand, TransitionResult>
 {
     public async Task<TransitionResult> Handle(RejectMaintenanceTicketCommand command, CancellationToken ct)
     {
         var (ticket, result) = await uow.ExecuteInTransactionAsync(async ct =>
         {
-            var ticket = await tickets.Query()
+            var ticket = await uow.Tickets.Query()
                 .Include(t => t.Employee)
                 .Include(t => t.MaintenanceDetail)
                 .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == (byte)TicketTypeEnum.Maintenance, ct);
@@ -31,7 +30,7 @@ public class RejectMaintenanceTicketCommandHandler(IUnitOfWork uow, ITicketRepos
             var result = await ticketFlow.ExecuteAsync(ticket.Id, TicketActionEnum.Reject, command.Note, ct);
 
             var assetId = ticket.MaintenanceDetail!.AssetId;
-            if (!await assets.ReleaseFromMaintenanceAsync(assetId, ct))
+            if (!await uow.Assets.ReleaseFromMaintenanceAsync(assetId, ct))
                 throw new BusinessRuleException($"Asset {assetId} is not under maintenance.");
 
             await uow.SaveChangesAsync(ct);
@@ -39,7 +38,7 @@ public class RejectMaintenanceTicketCommandHandler(IUnitOfWork uow, ITicketRepos
             return (ticket, result);
         }, ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
 
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket,

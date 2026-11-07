@@ -15,9 +15,7 @@ public record GetPendingTicketByIdQuery(Guid Id)
     : IRequest<TicketResponseDto>;
 
 public class GetPendingTicketByIdQueryHandler(
-    ITicketRepository tickets,
-    IWorkflowStepRepository workflowSteps,
-    IEmployeeRepository employees,
+    IUnitOfWork uow,
     ICurrentUser currentUser)
     : IRequestHandler<GetPendingTicketByIdQuery, TicketResponseDto>
 {
@@ -30,7 +28,7 @@ public class GetPendingTicketByIdQueryHandler(
         var roleLevels = LevelRoleMap.LevelsFor(roles);
 
         // 1. Ambil tiket aktif.
-        var ticket = await tickets.QueryNoTracking()
+        var ticket = await uow.Tickets.QueryNoTracking()
             .Include(t => t.TicketWorkflowLogs)
             .FirstOrDefaultAsync(
                 t => t.Id == query.Id && t.ClosedAt == null,
@@ -58,7 +56,7 @@ public class GetPendingTicketByIdQueryHandler(
         }
         else
         {
-            stepLevel = await workflowSteps.QueryNoTracking()
+            stepLevel = await uow.WorkflowSteps.QueryNoTracking()
                 .Where(s =>
                     s.StepCode == currentStep &&
                     s.Workflow.TicketType == ticket.TicketType &&
@@ -104,7 +102,7 @@ public class GetPendingTicketByIdQueryHandler(
         }
 
         // 5. Ambil detail tiket.
-        var dto = await tickets.QueryNoTracking()
+        var dto = await uow.Tickets.QueryNoTracking()
             .Where(t =>
                 t.Id == query.Id &&
                 t.ClosedAt == null)
@@ -185,7 +183,7 @@ public class GetPendingTicketByIdQueryHandler(
                     employeeId,
                     roles,
                     TicketActionEnum.Approve,
-                    employees,
+                    uow.Employees,
                     ct);
 
                 canRevise = await TaskAccess.CanActOnAsync(
@@ -194,7 +192,7 @@ public class GetPendingTicketByIdQueryHandler(
                     employeeId,
                     roles,
                     TicketActionEnum.Revise,
-                    employees,
+                    uow.Employees,
                     ct);
 
                 canReject = await TaskAccess.CanActOnAsync(
@@ -203,7 +201,7 @@ public class GetPendingTicketByIdQueryHandler(
                     employeeId,
                     roles,
                     TicketActionEnum.Reject,
-                    employees,
+                    uow.Employees,
                     ct);
             }
 
@@ -215,7 +213,7 @@ public class GetPendingTicketByIdQueryHandler(
                     employeeId,
                     roles,
                     TicketActionEnum.ReceiveGoods,
-                    employees,
+                    uow.Employees,
                     ct);
             }
 
@@ -229,7 +227,7 @@ public class GetPendingTicketByIdQueryHandler(
                     employeeId,
                     roles,
                     TicketActionEnum.Resubmit,
-                    employees,
+                    uow.Employees,
                     ct);
             }
         }
@@ -279,7 +277,7 @@ public class GetPendingTicketByIdQueryHandler(
             employeeId,
             roles,
             action.Value,
-            employees,
+            uow.Employees,
             ct);
     }
 }

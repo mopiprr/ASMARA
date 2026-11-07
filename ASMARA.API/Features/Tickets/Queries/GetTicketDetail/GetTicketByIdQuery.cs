@@ -10,23 +10,22 @@ namespace ASMARA.API.Features.Tickets.Queries.GetTicketDetail;
 
 public record GetTicketByIdQuery(Guid Id) : IRequest<TicketResponseDto>;
 
-public class GetTicketByIdQueryHandler(ITicketRepository tickets, ITicketWorkflowLogRepository logs, ITicketHistoryService history,
-    IWorkflowStepRepository workflowSteps, ICurrentUser currentUser)
+public class GetTicketByIdQueryHandler(IUnitOfWork uow, ITicketHistoryService history, ICurrentUser currentUser)
     : IRequestHandler<GetTicketByIdQuery, TicketResponseDto>
 {
     public async Task<TicketResponseDto> Handle(GetTicketByIdQuery query, CancellationToken ct)
     {
         var employeeId = currentUser.EmployeeId;
 
-        var ticket = await tickets.QueryNoTracking()
+        var ticket = await uow.Tickets.QueryNoTracking()
             .FirstOrDefaultAsync(t => t.Id == query.Id, ct);
         if (ticket == null)
             throw new NotFoundException($"Ticket {query.Id} was not found");
 
-        var currentStep = await tickets.GetCurrentStepAsync(query.Id, ct) ?? StepCodes.Created;
+        var currentStep = await uow.Tickets.GetCurrentStepAsync(query.Id, ct) ?? StepCodes.Created;
 
         var canView = ticket.EmployeeId == employeeId 
-                || await logs.QueryNoTracking()
+                || await uow.TicketWorkflowLogs.QueryNoTracking()
                     .AnyAsync(l => l.TicketId == query.Id && l.EmployeeId == employeeId, ct)
                 || TaskAccess.CanActOn(
                     ticket,
@@ -36,7 +35,7 @@ public class GetTicketByIdQueryHandler(ITicketRepository tickets, ITicketWorkflo
         if (!canView)
             throw new ForbiddenException($"You are not allowed to access it.");
 
-        var dto = await tickets.QueryNoTracking()
+        var dto = await uow.Tickets.QueryNoTracking()
            .Where(t => t.Id == query.Id)
            .Select(t => new TicketResponseDto(
                t.Id,
@@ -92,7 +91,7 @@ public class GetTicketByIdQueryHandler(ITicketRepository tickets, ITicketWorkflo
         if (stepCode == StepCodes.Created)
             return StepLevels.Requester;
 
-        return await workflowSteps.QueryNoTracking()
+        return await uow.WorkflowSteps.QueryNoTracking()
             .Where(s => s.StepCode == stepCode
                      && s.Workflow.TicketType == ticketType
                      && s.Workflow.IsActive)

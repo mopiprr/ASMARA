@@ -12,19 +12,18 @@ namespace ASMARA.API.Features.Maintenance.Commands.AssignHandlerMaintenanceTicke
 
 public record AssignHandlerCommand(Guid TicketId, AssignTechnicianDto Request) : IRequest<TransitionResult>;
 
-public class AssignHandlerCommandHandler(IUnitOfWork uow, ITicketRepository tickets, IEmployeeRepository employees,
-    ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
+public class AssignHandlerCommandHandler(IUnitOfWork uow, ITicketFlowService ticketFlow, ICurrentUser currentUser, IMediator mediator)
     : IRequestHandler<AssignHandlerCommand, TransitionResult>
 {
     public async Task<TransitionResult> Handle(AssignHandlerCommand command, CancellationToken ct)
     {
-        var ticket = await tickets.Query()
+        var ticket = await uow.Tickets.Query()
             .Include(t => t.Employee)
             .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == (byte)TicketTypeEnum.Maintenance, ct);
         if (ticket == null)
             throw new NotFoundException($"Maintenance ticket {command.TicketId} was not found.");
 
-        var handler = await employees.GetActiveHandlers()
+        var handler = await uow.Employees.GetActiveHandlers()
             .Where(e => e.Id == command.Request.TechnicianId)
             .Select(e => new { e.Id, e.FullName })
             .FirstOrDefaultAsync(ct);
@@ -38,7 +37,7 @@ public class AssignHandlerCommandHandler(IUnitOfWork uow, ITicketRepository tick
 
         await uow.SaveChangesAsync(ct);
 
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket, 
             ticket.Employee, 

@@ -13,22 +13,10 @@ namespace ASMARA.API.Features.Procurement.Commands.ReceiveProcurementGoods;
 public record ReceiveProcurementGoodsCommand(Guid TicketId, string? Note) 
     : IRequest<TransitionResult>;
 
-// public class ReceiveProcurementGoodsCommandHandler(
-//     ITicketRepository tickets,
-//     ITicketFlowService ticketFlow,
-//     IUnitOfWork uow,
-//     IMediator mediator,
-//     IEmployeeRepository employees,
-//     ICurrentUser currentUser)
-//     : IRequestHandler<ReceiveProcurementGoodsCommand, TransitionResult>
 public class ReceiveProcurementGoodsCommandHandler(
-    ITicketRepository tickets,
     ITicketFlowService ticketFlow,
     IUnitOfWork uow,
     IMediator mediator,
-    IEmployeeRepository employees,
-    IItemInventoryRepository itemInventories,
-    IAssetRepository assets,
     ICurrentUser currentUser)
     : IRequestHandler<ReceiveProcurementGoodsCommand, TransitionResult>
 {
@@ -38,7 +26,7 @@ public class ReceiveProcurementGoodsCommandHandler(
         // var ticket = await tickets.Query()
         //     .Include(t => t.Employee)
         //     .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == type, ct);
-        var ticket = await tickets.Query()
+        var ticket = await uow.Tickets.Query()
             .Include(t => t.Employee)
             .Include(t => t.ProcurementDetails)
                 .ThenInclude(d => d.ItemCategory)
@@ -51,7 +39,7 @@ public class ReceiveProcurementGoodsCommandHandler(
         var result = await ticketFlow.ExecuteAsync(command.TicketId, TicketActionEnum.ReceiveGoods, command.Note, ct);
 
         // 2. Hitung nomor urut AssetTag terakhir untuk pembuatan aset non-consumable
-        var existingTags = await assets.QueryNoTracking()
+        var existingTags = await uow.Assets.QueryNoTracking()
             .Where(a => a.AssetTag.StartsWith("AST-"))
             .Select(a => a.AssetTag)
             .ToListAsync(ct);
@@ -67,17 +55,17 @@ public class ReceiveProcurementGoodsCommandHandler(
             ItemInventory? inventory = null;
             if (detail.ItemId.HasValue)
             {
-                inventory = await itemInventories.GetByIdAsync(detail.ItemId.Value, ct);
+                inventory = await uow.ItemInventories.GetByIdAsync(detail.ItemId.Value, ct);
             }
 
             if (inventory is null)
             {
-                inventory = await itemInventories.Query()
+                inventory = await uow.ItemInventories.Query()
                     .FirstOrDefaultAsync(i => i.ItemName.ToLower() == detail.ItemName.ToLower(), ct);
 
                 if (inventory is null)
                 {
-                    var countSameCat = await itemInventories.QueryNoTracking()
+                    var countSameCat = await uow.ItemInventories.QueryNoTracking()
                         .CountAsync(i => i.ItemCategoryId == detail.ItemCategoryId, ct);
                     var catPrefix = detail.ItemCategory.CategoryCode.Replace("CAT-", "").Replace("DEV-CAT-", "");
                     if (string.IsNullOrWhiteSpace(catPrefix)) catPrefix = "ITM";
@@ -91,7 +79,7 @@ public class ReceiveProcurementGoodsCommandHandler(
                         IsActive = true,
                         Qty = detail.ItemCategory.TrackingType == (byte)TrackingTypeEnum.Consumable ? 0 : null
                     };
-                    itemInventories.Add(inventory);
+                    uow.ItemInventories.Add(inventory);
                     await uow.SaveChangesAsync(ct);
                 }
 
@@ -117,7 +105,7 @@ public class ReceiveProcurementGoodsCommandHandler(
                         Status = (byte)AssetStatusEnum.Available,
                         EmployeeId = null // Masuk ke inventaris gudang sebagai Available
                     };
-                    assets.Add(newAsset);
+                    uow.Assets.Add(newAsset);
                 }
             }
         }
@@ -126,7 +114,7 @@ public class ReceiveProcurementGoodsCommandHandler(
         await uow.SaveChangesAsync(ct);
 
         // 5. Kirim notifikasi email ke pemohon bahwa barang telah tiba di gudang
-        var actor = await employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
 
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket,
