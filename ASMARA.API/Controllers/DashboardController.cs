@@ -1,10 +1,8 @@
 using ASMARA.API.Common.Paging;
 using ASMARA.API.Enums;
-using ASMARA.API.Features.Dashboard.Queries.GetDashboardSummary;
 using ASMARA.API.Features.Dashboard.Queries.GetMyActivityTickets;
 using ASMARA.API.Features.Dashboard.Queries.GetTicketStatistics;
 using ASMARA.API.Models.Dashboard;
-using ASMARA.API.Models.Ticket;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
