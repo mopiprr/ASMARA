@@ -40,7 +40,7 @@ public record TicketNoteRequestDto(string? Note = "");
 
 public record TicketApprovalDto(
     string Action,
-    string? Note
+    string? Note = null
     );
         
 public record AssignTechnicianDto(

@@ -37,40 +37,20 @@ public class ProcurementsController(ISender sender) : ControllerBase
             ticket);
     }
 
-    [HttpPost("{id:guid}/approve")]
-    public async Task<ActionResult<TransitionResult>> Approve(
+    [HttpPost("{id:guid}/action")]
+    public async Task<ActionResult<TransitionResult>> ExecuteAction(
         Guid id,
-        [FromBody] TicketNoteRequestDto? request,
+        [FromBody] TicketApprovalDto request,
         CancellationToken ct)
     {
+        if (!Enum.TryParse<TicketActionEnum>(request.Action, ignoreCase: true, out var action) ||
+            action is not (TicketActionEnum.Approve or TicketActionEnum.Reject or TicketActionEnum.Revise or TicketActionEnum.Cancel))
+        {
+            return BadRequest(new { message = $"Aksi '{request.Action}' tidak valid. Aksi yang didukung: Approve, Reject, Revise, Cancel." });
+        }
+
         var result = await sender.Send(
-            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, TicketActionEnum.Approve, request?.Note),
-            ct);
-
-        return Ok(result);
-    }
-
-    [HttpPost("{id:guid}/reject")]
-    public async Task<ActionResult<TransitionResult>> Reject(
-        Guid id,
-        [FromBody] TicketNoteRequestDto? request,
-        CancellationToken ct)
-    {
-        var result = await sender.Send(
-            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, TicketActionEnum.Reject, request?.Note),
-            ct);
-
-        return Ok(result);
-    }
-
-    [HttpPost("{id:guid}/revise")]
-    public async Task<ActionResult<TransitionResult>> Revise(
-        Guid id,
-        [FromBody] TicketNoteRequestDto? request,
-        CancellationToken ct)
-    {
-        var result = await sender.Send(
-            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, TicketActionEnum.Revise, request?.Note),
+            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, action, request.Note),
             ct);
 
         return Ok(result);
