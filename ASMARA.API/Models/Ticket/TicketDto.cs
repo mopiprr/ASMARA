@@ -4,36 +4,6 @@ public class TicketDto
 {
     
 }
-
-public record CreateTicketDto(
-    Guid EmployeeId,
-    byte TicketType,
-    string Subject,
-    string? Description = null,
-    Guid? ParentTicketId = null,
-    Guid? AssignedToEmployeeId = null,
-    string? AssignedTo = null
-    );
-
-public record CompletedTicketListDto(
-    Guid Id,
-    string TicketNumber,
-    string TicketType,
-    string Subject,
-    Guid RequesterId,
-    string RequesterName,
-    DateTime CreatedAt,
-    DateTime? ClosedAt,
-    string CurrentStep,
-    string CurrentStepName);
-    
-    public record UpdateTicketDto(
-        string Subject,
-        string? Description = null,
-        Guid? AssignedToEmployeeId = null,
-        string? AssignedTo = null,
-        Guid? CurrentTaskEmployeeId = null
-    );
     
 public record TicketResponseDto(
     Guid Id,
