@@ -36,8 +36,13 @@ public class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
             ?? string.Empty;
 
     public IReadOnlyCollection<string> Roles
-        => User.FindAll("role")
+        => User.Claims
+            .Where(c =>
+                c.Type == "role" ||
+                c.Type == ClaimTypes.Role)
             .Select(c => c.Value)
+            .Where(role => !string.IsNullOrWhiteSpace(role))
+            .Distinct()
             .ToList();
 
     public bool IsInRole(string role)
