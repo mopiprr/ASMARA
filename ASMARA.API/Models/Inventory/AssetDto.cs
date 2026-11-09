@@ -33,3 +33,14 @@ public record MaintenanceAssetOptionDto(
     string ItemName,
     string CategoryName,
     bool IsShared);
+
+public record AssetListItemDto(
+    int Id,
+    string AssetTag,
+    string ItemName,
+    string CategoryName,
+    byte Status,
+    Guid? HolderId,
+    string? HolderName,
+    string? HolderDepartment,
+    bool IsPublic);
