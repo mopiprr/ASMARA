@@ -25,5 +25,3 @@ public record DepartmentResponse(
     string? ParentDepartmentName,
     bool IsActive
 );
-    
-    
