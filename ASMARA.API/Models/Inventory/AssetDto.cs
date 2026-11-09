@@ -44,3 +44,9 @@ public record AssetListItemDto(
     string? HolderName,
     string? HolderDepartment,
     bool IsPublic);
+
+public record AssetStatisticsDto(
+    int TotalAssets,
+    int Available,
+    int InUse,
+    int UnderMaintenance);

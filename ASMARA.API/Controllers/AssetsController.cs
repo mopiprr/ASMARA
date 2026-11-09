@@ -2,6 +2,7 @@
 using ASMARA.API.Common.Security;
 using ASMARA.API.Features.Catalog.Queries.GetAssets;
 using ASMARA.API.Features.Catalog.Queries.GetAssetsForMaintenance;
+using ASMARA.API.Features.Catalog.Queries.GetAssetStatistics;
 using ASMARA.API.Models.Inventory;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -22,4 +23,8 @@ public class AssetsController(ISender sender) : ControllerBase
     [Authorize(Roles = Roles.Inventory)]
     public async Task<ActionResult<PagedResult<AssetListItemDto>>> GetAssets([FromQuery] GetAssetsQuery query, CancellationToken cancellationToken)
         => Ok(await sender.Send(query, cancellationToken));
+
+    [HttpGet("statistics")]
+    public async Task<ActionResult<AssetStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetAssetStatisticsQuery(), cancellationToken));
 }
