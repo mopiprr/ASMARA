@@ -28,7 +28,10 @@ public record TicketResponseDto(
     bool CanRevise = false,
     bool CanReject = false,
     bool CanReceiveGoods = false,
-    bool CanResubmit = false
+    bool CanResubmit = false,
+    bool CanAssignHandler = false,
+    bool CanSendItem = false,
+    bool CanReceiveItem = false
 );
 
 public record TicketWorkflowHistoryDto(
