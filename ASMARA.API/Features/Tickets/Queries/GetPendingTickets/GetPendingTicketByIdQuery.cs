@@ -67,7 +67,7 @@ public class GetPendingTicketByIdQueryHandler(
 
         var ticketType = (TicketTypeEnum)ticket.TicketType;
 
-        // 4. Validasi hak akses user.
+        // 4. Validasi hak akses user untuk melihat pending ticket.
         bool canView;
 
         if (ticketType == TicketTypeEnum.Procurement)
@@ -165,13 +165,16 @@ public class GetPendingTicketByIdQueryHandler(
                 $"Pending ticket {query.Id} was not found.");
         }
 
-
         // 6. Tentukan hak akses tombol berdasarkan jenis tiket.
         var canApprove = false;
         var canRevise = false;
         var canReject = false;
         var canReceiveGoods = false;
         var canResubmit = false;
+
+        var canAssignHandler = false;
+        var canSendItem = false;
+        var canReceiveItem = false;
 
         if (ticketType == TicketTypeEnum.Procurement)
         {
@@ -232,19 +235,31 @@ public class GetPendingTicketByIdQueryHandler(
         }
         else if (ticketType == TicketTypeEnum.Maintenance)
         {
-            // Department Manager melakukan keputusan Maintenance.
-            if (currentStep == StepCodes.DepartmentApproval)
-            {
-                canApprove = TaskAccess.CanActOn(
-                    ticket,
-                    stepLevel,
-                    employeeId,
-                    roles);
+            // Hitung hak akses berdasarkan workflow Maintenance.
+            var canAct = TaskAccess.CanActOn(
+                ticket,
+                stepLevel,
+                employeeId,
+                roles);
 
-                canReject = canApprove;
-            }
+            var allowedActions = TransitionMap.AllowedActions(
+                ticketType,
+                currentStep);
+
+            bool Can(TicketActionEnum action)
+                => canAct && allowedActions.Contains(action);
+
+            // Department Manager.
+            canApprove = Can(TicketActionEnum.Approve);
+            canReject = Can(TicketActionEnum.Reject);
+
+            // IT Support.
+            canAssignHandler = Can(TicketActionEnum.AssignHandler);
+
+            // Maintenance workflow actions.
+            canSendItem = Can(TicketActionEnum.Send);
+            canReceiveItem = Can(TicketActionEnum.Receive);
         }
-
 
         // 7. Kembalikan DTO beserta hak akses user.
         return dto with
@@ -253,7 +268,11 @@ public class GetPendingTicketByIdQueryHandler(
             CanRevise = canRevise,
             CanReject = canReject,
             CanReceiveGoods = canReceiveGoods,
-            CanResubmit = canResubmit
+            CanResubmit = canResubmit,
+
+            CanAssignHandler = canAssignHandler,
+            CanSendItem = canSendItem,
+            CanReceiveItem = canReceiveItem
         };
     }
 

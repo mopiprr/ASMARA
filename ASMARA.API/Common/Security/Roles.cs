@@ -10,5 +10,6 @@ public static class Roles
     public const string Inventory = "ROL-06";
     public const string ItSupport = "ROL-07";
     public const string MaintenanceHandler = "ROL-08";
+    public const string Admin = "ROL-09";
 }
 

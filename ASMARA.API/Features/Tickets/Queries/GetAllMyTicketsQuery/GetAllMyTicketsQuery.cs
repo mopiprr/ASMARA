@@ -15,7 +15,8 @@ public record GetAllMyTicketsQuery(
     string? SortBy = null,
     int Page = 1,
     int PageSize = 10,
-    bool Desc = false)
+    bool Desc = false,
+    bool? IsClosed = null)
     : IRequest<PagedResult<TicketListItemDto>>;
 
 public class GetAllMyTicketsQueryHandler(IUnitOfWork uow,
@@ -30,6 +31,13 @@ public class GetAllMyTicketsQueryHandler(IUnitOfWork uow,
 
         var query = uow.Tickets.QueryNoTracking()
             .Where(t => t.EmployeeId == employeeId);
+
+        if (request.IsClosed.HasValue)
+        {
+            query = request.IsClosed.Value
+                ? query.Where(t => t.ClosedAt != null)
+                : query.Where(t => t.ClosedAt == null);
+        }
 
         if (request.Type.HasValue)
         {

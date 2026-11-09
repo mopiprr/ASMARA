@@ -25,5 +25,5 @@ public record DepartmentResponse(
     string? ParentDepartmentName,
     bool IsActive
 );
-    
-    
+
+public record DepartmentOptionDto(Guid Id, string DepartmentCode, string DepartmentName);

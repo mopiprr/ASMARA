@@ -1,22 +1,9 @@
 namespace ASMARA.API.Models.Auth;
 
-// public class RoleDto
-// {
-//     
-// }
+public class RoleDto
+{
 
-public record CreateRoleRequestDto(
-    string RoleCode,
-    string RoleName,
-    string? Description = null,
-    bool IsActive = true 
-    );
-
-public record UpdateRoleDto(
-    string RoleName,
-    string? Description = null,
-    bool IsActive = true 
-    );
+}
 
 public record RoleResponseDto(
     int Id,
@@ -26,3 +13,5 @@ public record RoleResponseDto(
     bool IsActive,
     DateTime CreatedAt
     );
+
+public record RoleOptionDto(int Id, string RoleCode, string RoleName, string? Description);

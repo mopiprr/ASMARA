@@ -4,24 +4,11 @@ public class ItemCategoryDto
 {
     
 }
-
-public record CreateItemCategoryRequest(
+   
+public record ItemCategoryResponseDto(
+    int Id,
     string CategoryCode,
     string CategoryName,
-    string TrackingType,
-    bool IsActive = true
+    byte TrackingType,
+    bool IsActive
     );
-    
-    public record UpdateItemCategoryRequest(
-        string CategoryName,
-        byte TrackingType,
-        bool IsActive = true
-    );
-    
-    public record ItemCategoryResponseDto(
-        int Id,
-        string CategoryCode,
-        string CategoryName,
-        byte TrackingType,
-        bool IsActive
-        );
