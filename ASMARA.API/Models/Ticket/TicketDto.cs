@@ -105,3 +105,9 @@ public record CompletedTicketListItemDto(
     DateTime? ClosedAt,
     string CurrentStep,
     string CurrentStepName);
+
+public record MyTicketStatisticsDto(
+    int TotalRequests,
+    int ActiveRequests,
+    int ClosedRequests,
+    int RejectedRequests);
