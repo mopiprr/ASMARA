@@ -48,13 +48,6 @@ public class GetTicketStatisticsQueryHandler(
             baseQuery = baseQuery.Where(t => t.CreatedAt < nextDayUtc);
         }
 
-        var subordinateIds = await uow.Employees.QueryNoTracking()
-            .Where(e => e.ManagerId == employeeId)
-            .Select(e => e.Id)
-            .ToListAsync(ct);
-
-        var subordinateIdSet = new HashSet<Guid>(subordinateIds);
-
         // Ambil workflowstep aktif
         var activeSteps = await uow.WorkflowSteps.QueryNoTracking()
             .Where(s => s.Workflow.IsActive)
@@ -77,7 +70,6 @@ public class GetTicketStatisticsQueryHandler(
             .ToListAsync(ct);
 
         var pendingTicketIds = new HashSet<Guid>();
-        var userRelevantOpenTicketIds = new HashSet<Guid>();
 
         foreach (var ticket in openTickets)
         {
@@ -117,41 +109,16 @@ public class GetTicketStatisticsQueryHandler(
             {
                 pendingTicketIds.Add(ticket.Id);
             }
-
-            // Evaluasi apakah tiket terbuka ini termasuk dalam lingkup user
-            var isUserRelevant =
-                isPendingForUser ||
-                ticket.EmployeeId == employeeId ||
-                ticket.AssignedToEmployeeId == employeeId ||
-                ticket.CurrentTaskEmployeeId == employeeId ||
-                subordinateIdSet.Contains(ticket.EmployeeId) ||
-                ticket.TicketWorkflowLogs.Any(l => l.EmployeeId == employeeId);
-
-            if (isUserRelevant)
-            {
-                userRelevantOpenTicketIds.Add(ticket.Id);
-            }
         }
 
         // Pending
         var pendingCount = pendingTicketIds.Count;
 
-        // InProgress
-        var inProgressCount = userRelevantOpenTicketIds.Count(id => !pendingTicketIds.Contains(id));
-
-        // Evaluasi tiket yang sudah selesai
-        var completedTicketsQuery = baseQuery
-            .Where(t => t.ClosedAt != null);
-
-        var completedCount = await completedTicketsQuery
-            .Where(t =>
-                t.EmployeeId == employeeId ||
-                t.AssignedToEmployeeId == employeeId ||
-                subordinateIdSet.Contains(t.EmployeeId) ||
-                t.TicketWorkflowLogs.Any(l => l.EmployeeId == employeeId))
-            .CountAsync(ct);
-
-        var totalCount = pendingCount + inProgressCount + completedCount;
+        // Tiket milik user yang sedang login
+        var myTicketsQuery = baseQuery.Where(t => t.EmployeeId == employeeId);
+        var totalCount = await myTicketsQuery.CountAsync(ct);
+        var inProgressCount = await myTicketsQuery.Where(t => t.ClosedAt == null).CountAsync(ct);
+        var completedCount = await myTicketsQuery.Where(t => t.ClosedAt != null).CountAsync(ct);
 
         return new TicketStatisticsDto(
             TotalTickets: totalCount,

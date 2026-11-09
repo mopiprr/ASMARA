@@ -50,20 +50,6 @@ public record AssignTechnicianDto(
     string? InstructionNote = null
     );
     
-public record SubmitRepairResultDto(
-    int ReplacementAssetId,
-    string? Note = null
-    );
-        
-public record ReceiveInventoryItemDto(
-    int ItemInventoryId,
-    int Quantity, 
-    string? Note = null
-    );
-            
-public record CloseTicketDto(
-    string? FeedbackNote = null
-    );
 
 public record PartCheckRequestDto(bool Available, string? Note = null);
 

@@ -4,21 +4,6 @@ public class ItemInventory
 {
     
 }
-
-public record CreateItemInventoryRequest(
-    int ItemCategoryId,
-    string ItemCode,
-    string ItemName, 
-    int? Qty = null,
-    bool IsActive = true
-    );
-    
-    public record UpdateItemInventoryRequest(
-        int ItemCategoryId,
-        string ItemName,
-        int? Qty = null,
-        bool IsActive = true
-    );
     
     public record ItemInventoryResponseDto(
         int Id,
