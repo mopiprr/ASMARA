@@ -49,7 +49,6 @@ public record AssignTechnicianDto(
     Guid TechnicianId,
     string? InstructionNote = null
     );
-    
 
 public record PartCheckRequestDto(bool Available, string? Note = null);
 

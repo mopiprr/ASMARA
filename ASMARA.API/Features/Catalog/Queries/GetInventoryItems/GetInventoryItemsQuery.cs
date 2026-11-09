@@ -1,4 +1,5 @@
 using ASMARA.API.Data.Repositories;
+using ASMARA.API.Enums;
 using ASMARA.API.Models.Inventory;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,9 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
             query = query.Where(i => i.ItemName.ToLower().Contains(term) || i.ItemCode.ToLower().Contains(term));
         }
 
+        const byte consumable = (byte)TrackingTypeEnum.Consumable;
+        const byte availableStatus = (byte)AssetStatusEnum.Available;
+
         return await query
             .OrderBy(i => i.ItemCategory.CategoryName)
             .ThenBy(i => i.ItemName)
@@ -46,8 +50,17 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
                 i.ItemCategory.CategoryName,
                 i.ItemCode,
                 i.ItemName,
-                i.Qty,
-                i.IsActive
+                i.ItemCategory.TrackingType == consumable
+                    ? (i.Qty ?? 0)
+                    : i.Assets.Count(a => a.Status == availableStatus),
+                i.IsActive,
+                i.ItemCategory.TrackingType,
+                i.ItemCategory.TrackingType == consumable
+                    ? null
+                    : (int?)i.Assets.Count(),
+                i.ItemCategory.TrackingType == consumable
+                    ? null
+                    : (int?)i.Assets.Count(a => a.Status == availableStatus)
             ))
             .ToListAsync(ct);
     }
