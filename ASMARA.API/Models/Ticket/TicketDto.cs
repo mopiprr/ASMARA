@@ -93,19 +93,6 @@ public record PendingTicketListItemDto(
     string CurrentStep,
     string CurrentStepName);
 
-public record CompletedTicketListItemDto(
-    Guid Id,
-    string TicketNumber,
-    byte TicketType,
-    string TicketTypeName,
-    string Subject,
-    Guid RequesterId,
-    string RequesterName,
-    DateTime CreatedAt,
-    DateTime? ClosedAt,
-    string CurrentStep,
-    string CurrentStepName);
-
 public record MyTicketStatisticsDto(
     int TotalRequests,
     int ActiveRequests,
