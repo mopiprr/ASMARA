@@ -69,19 +69,6 @@ public class ProcurementsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("{id:guid}/cancel")]
-    public async Task<ActionResult<TransitionResult>> Cancel(
-        Guid id,
-        [FromBody] TicketNoteRequestDto? request,
-        CancellationToken ct)
-    {
-        var result = await sender.Send(
-            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, TicketActionEnum.Cancel, request?.Note),
-            ct);
-
-        return Ok(result);
-    }
-
     [HttpPost("{id:guid}/receive-goods")]
     public async Task<ActionResult<TransitionResult>> ReceiveGoods(
         Guid id,
