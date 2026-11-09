@@ -165,7 +165,8 @@ public class GetPendingTicketByIdQueryHandler(
                 $"Pending ticket {query.Id} was not found.");
         }
 
-        // 6. Tentukan hak akses tombol Procurement.
+
+        // 6. Tentukan hak akses tombol berdasarkan jenis tiket.
         var canApprove = false;
         var canRevise = false;
         var canReject = false;
@@ -217,8 +218,6 @@ public class GetPendingTicketByIdQueryHandler(
                     ct);
             }
 
-            // Employee pembuat tiket dapat melakukan Resubmit
-            // ketika tiket berada pada tahap EmployeeRevision.
             if (currentStep == StepCodes.EmployeeRevision)
             {
                 canResubmit = await TaskAccess.CanActOnAsync(
@@ -231,6 +230,21 @@ public class GetPendingTicketByIdQueryHandler(
                     ct);
             }
         }
+        else if (ticketType == TicketTypeEnum.Maintenance)
+        {
+            // Department Manager melakukan keputusan Maintenance.
+            if (currentStep == StepCodes.DepartmentApproval)
+            {
+                canApprove = TaskAccess.CanActOn(
+                    ticket,
+                    stepLevel,
+                    employeeId,
+                    roles);
+
+                canReject = canApprove;
+            }
+        }
+
 
         // 7. Kembalikan DTO beserta hak akses user.
         return dto with
