@@ -64,7 +64,7 @@ public class MaintenancesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new AssignHandlerCommand(id, request), ct));
 
     [HttpPost("{id:guid}/receive")]
-    public async Task<ActionResult<TransitionResult>> Receive(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
+    public async Task<ActionResult<TransitionResult>> Receive(Guid id, [FromBody] ReceiveItemNoteRequestDto? request, CancellationToken ct)
         => Ok(await sender.Send(new ReceiveItemCommand(id, request?.Note), ct));
 
     [HttpPost("{id:guid}/repair-result")]

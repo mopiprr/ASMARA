@@ -38,6 +38,8 @@ public record CreateProcurementItemRequest(
 
 public record TicketNoteRequestDto(string? Note = "");
 
+public record ReceiveItemNoteRequestDto(string? Note = "");
+
 public record TicketApprovalDto(
     string Action,
     string? Note = null
