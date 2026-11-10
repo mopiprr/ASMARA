@@ -25,6 +25,7 @@ public class AssetsController(ISender sender) : ControllerBase
         => Ok(await sender.Send(query, cancellationToken));
 
     [HttpGet("statistics")]
+    [Authorize(Roles = Roles.Inventory)]
     public async Task<ActionResult<AssetStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetAssetStatisticsQuery(), cancellationToken));
 }
