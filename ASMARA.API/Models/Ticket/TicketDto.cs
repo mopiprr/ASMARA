@@ -31,7 +31,8 @@ public record TicketResponseDto(
     bool CanResubmit = false,
     bool CanAssignHandler = false,
     bool CanSendItem = false,
-    bool CanReceiveItem = false
+    bool CanReceiveItem = false,
+    string? PurchaseProofFileName = null
 );
 
 public record TicketWorkflowHistoryDto(

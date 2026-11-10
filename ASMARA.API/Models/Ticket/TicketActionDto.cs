@@ -61,3 +61,10 @@ public record ReplacementRequestDto(bool Available, int? ReplacementAssetId = nu
 public record OrderPartRequestDto(string Subject, string? Description, List<CreateProcurementItemRequest> Items, string? Note = null);
 
 public record SendReplacementRequestDto(int ReplacementAssetId, string? Note = null);
+
+public class ReceiveGoodsRequestDto
+{
+    public string? Note { get; set; }
+
+    public IFormFile? ProofFile { get; set; }
+}

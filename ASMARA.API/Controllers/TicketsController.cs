@@ -1,4 +1,5 @@
 using ASMARA.API.Common.Paging;
+using ASMARA.API.Features.Procurement.Queries.GetPurchaseProof;
 using ASMARA.API.Features.Tickets.Queries.GetAllMyTicketsQuery;
 using ASMARA.API.Features.Tickets.Queries.GetMyTicketStatistics;
 using ASMARA.API.Features.Tickets.Queries.GetPendingTickets;
@@ -34,4 +35,21 @@ public class TicketsController(ISender sender) : ControllerBase
     [HttpGet("my-statistics")]
     public async Task<ActionResult<MyTicketStatisticsDto>> GetMyStatistics([FromQuery] GetMyTicketStatisticsQuery query, CancellationToken ct)
         => Ok(await sender.Send(query, ct));
+
+    [HttpGet("{id:guid}/purchase-proof")]
+    public async Task<IActionResult> GetPurchaseProof(Guid id, CancellationToken ct)
+    {
+        await sender.Send(new GetTicketByIdQuery(id), ct);
+
+        var proof = await sender.Send(new GetPurchaseProofQuery(id), ct);
+
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        var openInline = (proof.ContentType.StartsWith("image/") && proof.ContentType != "image/svg+xml")
+                         || proof.ContentType == "application/pdf";
+
+        return openInline
+            ? File(proof.Content, proof.ContentType)
+            : File(proof.Content, proof.ContentType, proof.FileName);
+    }
 }
