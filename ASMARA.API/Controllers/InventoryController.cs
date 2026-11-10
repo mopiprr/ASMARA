@@ -1,5 +1,10 @@
+using ASMARA.API.Common.Security;
+using ASMARA.API.Features.Catalog.Commands.CreateInventoryItem;
+using ASMARA.API.Features.Catalog.Commands.DeleteInventoryItem;
+using ASMARA.API.Features.Catalog.Commands.UpdateInventoryItem;
 using ASMARA.API.Features.Catalog.Queries.GetInventoryItems;
 using ASMARA.API.Features.Catalog.Queries.GetItemCategories;
+using ASMARA.API.Models.Inventory;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +21,7 @@ public class InventoryController(IMediator mediator) : ControllerBase
     /// Mendukung filter kategori (?categoryId=1) dan pencarian teks (?search=dell).
     /// </summary>
     [HttpGet("items")]
-    public async Task<IActionResult> GetItems(
+    public async Task<ActionResult<List<ItemInventoryResponseDto>>> GetItems(
         [FromQuery] int? categoryId,
         [FromQuery] string? search,
         [FromQuery] bool onlyActive = true,
@@ -36,5 +41,48 @@ public class InventoryController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetItemCategoriesQuery(onlyActive), ct);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Menambah barang baru ke master inventaris.
+    /// Jika kategori bertipe Non-Consumable, sistem otomatis men-generate Asset Tag (AST-XXXXXX) sejumlah initialStock.
+    /// </summary>
+    [HttpPost("items")]
+    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    public async Task<ActionResult<ItemInventoryResponseDto>> CreateItem(
+        [FromBody] CreateInventoryItemRequestDto dto,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new CreateInventoryItemCommand(dto.ItemCategoryId, dto.ItemName, dto.InitialStock), ct);
+        return CreatedAtAction(nameof(GetItems), new { search = result.ItemCode }, result);
+    }
+
+    /// <summary>
+    /// Mengubah nama, kategori, atau jumlah stok barang inventaris.
+    /// Untuk Non-Consumable, penambahan/pengurangan stok akan disinkronkan dengan entri aset di tabel Asset.
+    /// </summary>
+    [HttpPut("items/{id:int}")]
+    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    public async Task<ActionResult<ItemInventoryResponseDto>> UpdateItem(
+        int id,
+        [FromBody] UpdateInventoryItemRequestDto dto,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new UpdateInventoryItemCommand(id, dto.ItemName, dto.ItemCategoryId, dto.NewStock, dto.IsActive), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Menonaktifkan (soft delete) barang inventaris.
+    /// Gagal jika masih terdapat aset yang sedang digunakan (in-use) oleh karyawan.
+    /// </summary>
+    [HttpDelete("items/{id:int}")]
+    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    public async Task<IActionResult> DeleteItem(
+        int id,
+        CancellationToken ct = default)
+    {
+        var success = await mediator.Send(new DeleteInventoryItemCommand(id), ct);
+        return Ok(new { success, message = "Item inventory successfully deactivated." });
     }
 }

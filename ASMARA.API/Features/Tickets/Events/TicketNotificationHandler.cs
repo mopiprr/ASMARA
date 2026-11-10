@@ -284,6 +284,7 @@ public class TicketNotificationHandler(
                 break;
 
             case "assignhandler":
+            {
                 var assignedTech = ticket.AssignedToEmployeeId.HasValue
                     ? await uow.Employees.GetByIdAsync(ticket.AssignedToEmployeeId.Value, ct)
                     : null;
@@ -321,6 +322,7 @@ public class TicketNotificationHandler(
                 );
                 await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Teknisi Ditugaskan: {ticket.TicketNumber}", reqBody, ct);
                 break;
+            }
 
             case "resubmit":
                 var resubmitManager = (ticket.CurrentTaskEmployeeId.HasValue ? await uow.Employees.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
@@ -348,27 +350,223 @@ public class TicketNotificationHandler(
                 }
                 break;
 
-            case "completed":
-            case "receivegoods":
+            case "send":
+            {
+                if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
+                {
+                    var sendStep = await uow.Tickets.GetCurrentStepAsync(ticket.Id, ct);
+                    var detail = notification.MaintenanceDetail ??
+                        await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                    var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
+
+                    if (sendStep == StepCodes.HandlerReceiveItem)
+                    {
+                        var assignedTech = ticket.AssignedToEmployeeId.HasValue
+                            ? await uow.Employees.GetByIdAsync(ticket.AssignedToEmployeeId.Value, ct)
+                            : null;
+
+                        if (assignedTech != null && !string.IsNullOrWhiteSpace(assignedTech.Email))
+                        {
+                            var complaint = detail?.Description ?? ticket.Description ?? "-";
+                            var sendExtraInfo = $"<strong>Pemohon:</strong> {requester.FullName}<br><strong>Asset Tag:</strong> {assetTag}<br><strong>Keluhan:</strong> {complaint}";
+                            var sendBody = EmailTemplates.Notification(
+                                recipientName: assignedTech.FullName,
+                                title: "Unit Perangkat Diserahkan",
+                                message: $"Pemohon <strong>{requester.FullName}</strong> telah mengonfirmasi penyerahan unit perangkat untuk tiket <strong>{ticket.TicketNumber}</strong>. Silakan periksa dan konfirmasi penerimaan unit di sistem ASMARA.",
+                                ticketNumber: ticket.TicketNumber,
+                                note: notification.Note,
+                                extraInfo: sendExtraInfo
+                            );
+                            await emailService.SendEmailAsync(assignedTech.Email, $"[ASMARA] Penyerahan Unit: {ticket.TicketNumber}", sendBody, ct);
+                        }
+                    }
+                    else if (sendStep == StepCodes.RequesterReceiveItem)
+                    {
+                        var sendBackExtra = $"<strong>Petugas:</strong> {actor.FullName}<br><strong>Asset Tag:</strong> {assetTag}";
+                        var sendBackBody = EmailTemplates.Notification(
+                            recipientName: requester.FullName,
+                            title: "Perangkat Siap Diterima Kembali",
+                            message: $"Perangkat untuk tiket perawatan <strong>{ticket.TicketNumber}</strong> telah dikirimkan kembali oleh <strong>{actor.FullName}</strong>. Silakan periksa fisik unit dan konfirmasi penerimaan di sistem ASMARA.",
+                            ticketNumber: ticket.TicketNumber,
+                            note: notification.Note,
+                            extraInfo: sendBackExtra
+                        );
+                        await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Pengembalian Perangkat: {ticket.TicketNumber}", sendBackBody, ct);
+                    }
+                }
+                break;
+            }
+
+            case "receive":
+            {
+                if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
+                {
+                    var receiveStep = await uow.Tickets.GetCurrentStepAsync(ticket.Id, ct);
+                    var detail = notification.MaintenanceDetail ??
+                        await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                    var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
+
+                    if (receiveStep == StepCodes.RepairInProgress)
+                    {
+                        var receiveExtra = $"<strong>Teknisi:</strong> {actor.FullName}<br><strong>Asset Tag:</strong> {assetTag}";
+                        var receiveBody = EmailTemplates.Notification(
+                            recipientName: requester.FullName,
+                            title: "Perangkat Diterima oleh Teknisi",
+                            message: $"Perangkat Anda untuk tiket <strong>{ticket.TicketNumber}</strong> telah diterima oleh teknisi <strong>{actor.FullName}</strong> dan saat ini sedang dalam proses pemeriksaan / perbaikan.",
+                            ticketNumber: ticket.TicketNumber,
+                            note: notification.Note,
+                            extraInfo: receiveExtra
+                        );
+                        await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Perangkat Diterima Teknisi: {ticket.TicketNumber}", receiveBody, ct);
+                    }
+                    else if (receiveStep == StepCodes.RequesterClose)
+                    {
+                        var recCloseExtra = $"<strong>Asset Tag:</strong> {assetTag}";
+                        var recCloseBody = EmailTemplates.Notification(
+                            recipientName: requester.FullName,
+                            title: "Penerimaan Unit Terkonfirmasi",
+                            message: $"Anda telah mengonfirmasi penerimaan kembali unit perangkat untuk tiket <strong>{ticket.TicketNumber}</strong>. Silakan pastikan kondisi perangkat berfungsi dengan baik dan lakukan penutupan tiket (Close) di sistem ASMARA.",
+                            ticketNumber: ticket.TicketNumber,
+                            note: notification.Note,
+                            extraInfo: recCloseExtra
+                        );
+                        await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Konfirmasi Penerimaan Unit: {ticket.TicketNumber}", recCloseBody, ct);
+                    }
+                }
+                break;
+            }
+
+            case "needpart":
+            {
+                if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
+                {
+                    var detail = notification.MaintenanceDetail ??
+                        await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                    var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
+                    var partReq = !string.IsNullOrWhiteSpace(detail?.PartRequirement) ? detail.PartRequirement : (notification.Note ?? "-");
+                    var partExtra = $"<strong>Teknisi:</strong> {actor.FullName}<br><strong>Asset Tag:</strong> {assetTag}<br><strong>Kebutuhan Part:</strong> {partReq}";
+
+                    var inventoryEmails = await GetEmailsByRoleAsync(Roles.Inventory, ct);
+                    if (inventoryEmails.Count == 0) inventoryEmails = ["inventory.team@asmara.local"];
+
+                    var partBody = EmailTemplates.Notification(
+                        recipientName: "Tim Inventory",
+                        title: "Permintaan Kebutuhan Suku Cadang",
+                        message: $"Teknisi <strong>{actor.FullName}</strong> membutuhkan suku cadang untuk perbaikan perangkat pada tiket <strong>{ticket.TicketNumber}</strong>. Silakan periksa ketersediaan suku cadang di gudang inventaris.",
+                        ticketNumber: ticket.TicketNumber,
+                        note: notification.Note,
+                        extraInfo: partExtra
+                    );
+                    await emailService.SendEmailAsync(inventoryEmails, $"[ASMARA] Permintaan Suku Cadang: {ticket.TicketNumber}", partBody, ct);
+                }
+                break;
+            }
+
+            case "unrepairable":
+            {
+                if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
+                {
+                    var detail = notification.MaintenanceDetail ??
+                        await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                    var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
+                    var handlerNote = !string.IsNullOrWhiteSpace(detail?.HandlerNote) ? detail.HandlerNote : (notification.Note ?? "Perangkat mengalami kerusakan fatal dan tidak dapat diperbaiki.");
+                    var unrepairExtra = $"<strong>Pemohon:</strong> {requester.FullName}<br><strong>Teknisi:</strong> {actor.FullName}<br><strong>Asset Tag:</strong> {assetTag}<br><strong>Catatan Teknisi:</strong> {handlerNote}";
+
+                    var divMgrEmails = await GetEmailsByRoleAsync(Roles.DivisionManager, ct);
+                    if (divMgrEmails.Count == 0) divMgrEmails = ["division.manager@asmara.local"];
+
+                    var unrepairBody = EmailTemplates.Notification(
+                        recipientName: "Division Manager",
+                        title: "Peninjauan Aset Rusak Total",
+                        message: $"Perangkat pada tiket perawatan <strong>{ticket.TicketNumber}</strong> dinyatakan tidak dapat diperbaiki oleh teknisi <strong>{actor.FullName}</strong>. Menunggu keputusan Anda untuk pemusnahan (Dispose) atau pengarsipan (Archive).",
+                        ticketNumber: ticket.TicketNumber,
+                        note: handlerNote,
+                        extraInfo: unrepairExtra
+                    );
+                    await emailService.SendEmailAsync(divMgrEmails, $"[ASMARA] Review Aset Rusak Total: {ticket.TicketNumber}", unrepairBody, ct);
+                }
+                break;
+            }
+
+            case "dispose":
+            case "archive":
+            {
+                if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
+                {
+                    var isDispose = action == "dispose";
+                    var actionText = isDispose ? "Pemusnahan (Dispose)" : "Pengarsipan/Kanibalisasi (Archive)";
+                    var detail = notification.MaintenanceDetail ??
+                        await uow.MaintenanceDetails.QueryNoTracking().Include(m => m.Asset).FirstOrDefaultAsync(m => m.TicketId == ticket.Id, ct);
+                    var assetTag = detail?.Asset?.AssetTag ?? "Aset Terdaftar";
+                    var invActionExtra = $"<strong>Asset Tag:</strong> {assetTag}<br><strong>Keputusan Oleh:</strong> {actor.FullName}";
+
+                    var inventoryEmails = await GetEmailsByRoleAsync(Roles.Inventory, ct);
+                    if (inventoryEmails.Count == 0) inventoryEmails = ["inventory.team@asmara.local"];
+
+                    var invActionBody = EmailTemplates.Notification(
+                        recipientName: "Tim Inventory",
+                        title: $"Instruksi {actionText}",
+                        message: $"Manajer Divisi (<strong>{actor.FullName}</strong>) telah menyetujui tindakan <strong>{actionText}</strong> untuk aset pada tiket <strong>{ticket.TicketNumber}</strong>. Silakan tindak lanjuti pengelolaan fisik aset di gudang inventaris.",
+                        ticketNumber: ticket.TicketNumber,
+                        note: notification.Note,
+                        extraInfo: invActionExtra
+                    );
+                    await emailService.SendEmailAsync(inventoryEmails, $"[ASMARA] Instruksi {actionText}: {ticket.TicketNumber}", invActionBody, ct);
+                }
+                break;
+            }
+
             case "repaired":
-            case "close":
-                var completedTitle = ticket.TicketType == (byte)TicketTypeEnum.Procurement
-                    ? "Barang Pengadaan Tiba di Inventory"
-                    : "Perbaikan Perangkat Selesai";
-
-                var completedMessage = ticket.TicketType == (byte)TicketTypeEnum.Procurement
-                    ? "Barang yang diajukan telah dibeli oleh Purchasing dan sudah tiba di gudang Inventory. Silakan ambil barang dan lakukan penutupan tiket."
-                    : $"Perangkat Anda telah selesai diperbaiki oleh teknisi (<strong>{actor.FullName}</strong>). Silakan ambil perangkat Anda dan tutup tiket di sistem ASMARA.";
-
-                var completeBody = EmailTemplates.Notification(
+            {
+                var repairBody = EmailTemplates.Notification(
                     recipientName: requester.FullName,
-                    title: completedTitle,
-                    message: completedMessage,
+                    title: "Perbaikan Perangkat Selesai",
+                    message: $"Perangkat Anda telah selesai diperbaiki oleh teknisi (<strong>{actor.FullName}</strong>). Silakan ambil perangkat Anda dan lakukan konfirmasi penerimaan di sistem ASMARA.",
                     ticketNumber: ticket.TicketNumber,
                     note: notification.Note
                 );
-                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] {completedTitle}: {ticket.TicketNumber}", completeBody, ct);
+                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Perbaikan Perangkat Selesai: {ticket.TicketNumber}", repairBody, ct);
                 break;
+            }
+
+            case "completed":
+            case "receivegoods":
+            {
+                var compTitle = ticket.TicketType == (byte)TicketTypeEnum.Procurement
+                    ? "Barang Pengadaan Tiba di Inventory"
+                    : "Penyelesaian Tiket";
+
+                var compMessage = ticket.TicketType == (byte)TicketTypeEnum.Procurement
+                    ? "Barang yang diajukan telah dibeli oleh Purchasing dan sudah tiba di gudang Inventory. Silakan ambil barang dan lakukan penutupan tiket."
+                    : $"Tiket perawatan <strong>{ticket.TicketNumber}</strong> telah selesai diproses.";
+
+                var compBody = EmailTemplates.Notification(
+                    recipientName: requester.FullName,
+                    title: compTitle,
+                    message: compMessage,
+                    ticketNumber: ticket.TicketNumber,
+                    note: notification.Note
+                );
+                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] {compTitle}: {ticket.TicketNumber}", compBody, ct);
+                break;
+            }
+
+            case "close":
+            {
+                var closeNote = !string.IsNullOrWhiteSpace(notification.Note) 
+                    ? notification.Note 
+                    : "Tiket telah selesai dan ditutup secara resmi.";
+
+                var closeBody = EmailTemplates.Notification(
+                    recipientName: requester.FullName,
+                    title: "Tiket Telah Ditutup",
+                    message: $"Tiket <strong>{ticket.TicketNumber}</strong> telah resmi ditutup. Terima kasih telah menggunakan layanan sistem ASMARA.",
+                    ticketNumber: ticket.TicketNumber,
+                    note: closeNote
+                );
+                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Tiket Resmi Ditutup: {ticket.TicketNumber}", closeBody, ct);
+                break;
+            }
 
             default:
                 logger.LogInformation("Action {Action} does not have an email trigger defined.", notification.Action);
