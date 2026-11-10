@@ -31,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Procurement\" />
     <Folder Include="Middlewares\" />
     <Folder Include="Services\Email\" />
   </ItemGroup>

@@ -261,6 +261,8 @@ public partial class AsmaraDbContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("(newsequentialid())", "DF_Ticket_Id");
             entity.Property(e => e.AssignedTo).HasMaxLength(50);
+            entity.Property(e => e.PurchaseProofFileName).HasMaxLength(255);
+            entity.Property(e => e.PurchaseProofPath).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_Ticket_CreatedAt");
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.Subject).HasMaxLength(50);

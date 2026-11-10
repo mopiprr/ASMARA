@@ -16,7 +16,8 @@ public record GetPendingTicketByIdQuery(Guid Id)
 
 public class GetPendingTicketByIdQueryHandler(
     IUnitOfWork uow,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    ITicketHistoryService history)
     : IRequestHandler<GetPendingTicketByIdQuery, TicketResponseDto>
 {
     public async Task<TicketResponseDto> Handle(
@@ -261,6 +262,8 @@ public class GetPendingTicketByIdQueryHandler(
             canReceiveItem = Can(TicketActionEnum.Receive);
         }
 
+        var historyItems = await history.GetHistoryAsync(query.Id, ct);
+
         // 7. Kembalikan DTO beserta hak akses user.
         return dto with
         {
@@ -272,7 +275,8 @@ public class GetPendingTicketByIdQueryHandler(
 
             CanAssignHandler = canAssignHandler,
             CanSendItem = canSendItem,
-            CanReceiveItem = canReceiveItem
+            CanReceiveItem = canReceiveItem,
+            History = historyItems
         };
     }
 

@@ -1,6 +1,7 @@
 ﻿using ASMARA.API.Data;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Services.Email;
+using ASMARA.API.Services.Storage;
 using ASMARA.API.Services.TicketFlow;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,7 @@ public static class ServiceCollectionExtensions
         #region Services
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.AddScoped<IEmailService, EmailService>();
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
         #endregion
 
         #region Repositories
