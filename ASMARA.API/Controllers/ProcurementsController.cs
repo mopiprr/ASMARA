@@ -74,11 +74,11 @@ public class ProcurementsController(ISender sender) : ControllerBase
     [RequestSizeLimit(6 * 1024 * 1024)]
     public async Task<ActionResult<TransitionResult>> ReceiveGoods(
         Guid id,
-        [FromForm] ReceiveGoodsRequestDto? request,
+        [FromForm] ReceiveGoodsRequestDto request,
         CancellationToken ct)
     {
         var result = await sender.Send(
-            new ReceiveProcurementGoodsCommand(id, request?.Note, request.ProofFile!),
+            new ReceiveProcurementGoodsCommand(id, request.Note, request.ProofFile!),
             ct);
 
         return Ok(result);

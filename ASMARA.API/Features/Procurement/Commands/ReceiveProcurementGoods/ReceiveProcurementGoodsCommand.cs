@@ -24,12 +24,8 @@ public class ReceiveProcurementGoodsCommandHandler(
 {
     public async Task<TransitionResult> Handle(ReceiveProcurementGoodsCommand command, CancellationToken ct)
     {
-        var proofPath = await fileStorage.SaveAsync(command.ProofFile, "procurement-proofs", ct);
-
         var type = (byte)TicketTypeEnum.Procurement;
-        // var ticket = await tickets.Query()
-        //     .Include(t => t.Employee)
-        //     .FirstOrDefaultAsync(t => t.Id == command.TicketId && t.TicketType == type, ct);
+
         var ticket = await uow.Tickets.Query()
             .Include(t => t.Employee)
             .Include(t => t.ProcurementDetails)
@@ -38,6 +34,8 @@ public class ReceiveProcurementGoodsCommandHandler(
 
         if (ticket is null)
             throw new NotFoundException($"Procurement ticket {command.TicketId} was not found.");
+
+        var proofPath = await fileStorage.SaveAsync(command.ProofFile, "procurement-proofs", ct);
 
         TransitionResult result;
         try

@@ -8,9 +8,11 @@ public class LocalFileStorage : IFileStorage
     {
         var configured = configuration["FileStorage:RootPath"];
 
-        _rootPath = Path.GetFullPath(string.IsNullOrWhiteSpace(configured)
-            ? Path.Combine(env.ContentRootPath, "App_Data", "uploads")
-            : configured);
+        if (string.IsNullOrWhiteSpace(configured))
+            configured = Path.Combine("App_Data", "uploads");
+        _rootPath = Path.GetFullPath(Path.IsPathRooted(configured)
+            ? configured
+            : Path.Combine(env.ContentRootPath, configured));
 
         Directory.CreateDirectory(_rootPath);
     }

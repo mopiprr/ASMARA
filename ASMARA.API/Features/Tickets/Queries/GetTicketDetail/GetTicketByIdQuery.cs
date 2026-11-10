@@ -83,7 +83,7 @@ public class GetTicketByIdQueryHandler(IUnitOfWork uow, ITicketHistoryService hi
 
         var historyItems = await history.GetHistoryAsync(query.Id, ct);
 
-        return dto with { CurrentStep = currentStep, History = historyItems };
+        return dto with { CurrentStep = currentStep, History = historyItems, PurchaseProofFileName = ticket.PurchaseProofFileName };
     }
 
     private async Task<int?> GetStepLevelAsync(byte ticketType, string stepCode, CancellationToken ct)

@@ -15,4 +15,4 @@ Asmara.API/Logs/
 **/appsettings.json
 **/appsettings.Development.json
 
-App_Data/uploads/
+Asmara.API/Uploads/
