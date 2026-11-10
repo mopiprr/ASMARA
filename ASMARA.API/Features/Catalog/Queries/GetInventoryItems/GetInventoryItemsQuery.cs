@@ -49,7 +49,6 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
                 i.ItemCategory.CategoryName,
                 i.ItemCode,
                 i.ItemName,
-<<<<<<< Updated upstream
                 i.Qty,
                 i.IsActive,
                 i.ItemCategory.TrackingType,
@@ -60,16 +59,7 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
                 i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable
                     ? i.Assets.Count(a => a.Status == (byte)AssetStatusEnum.Available)
                     : null
-=======
-                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable
-                    ? i.Assets.Count(a => a.Status == assetStatusAvailable)
-                    : i.Qty,
-                i.IsActive,
-                i.ItemCategory.TrackingType,
-                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable ? i.Assets.Count : null,
-                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable ? i.Assets.Count(a => a.Status == assetStatusAvailable) : null
->>>>>>> Stashed changes
-            ))
+              ))
             .ToListAsync(ct);
     }
 }
