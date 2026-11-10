@@ -2,6 +2,7 @@ using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Enums;
 using ASMARA.API.Services.Email;
+using ASMARA.API.Services.TicketFlow;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,45 +132,76 @@ public class TicketNotificationHandler(
                 }
                 break;
             case "approve":
-                var requesterMessage = ticket.TicketType == (byte)TicketTypeEnum.Procurement
-                    ? $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan diteruskan ke Finance untuk peninjauan anggaran."
-                    : $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan saat ini sedang diteruskan ke tahap berikutnya.";
-
                 var approveNote = !string.IsNullOrWhiteSpace(notification.Note) 
                     ? notification.Note 
                     : "Disetujui untuk diteruskan ke tahap berikutnya.";
 
-                var approveBody = EmailTemplates.Notification(
-                    recipientName: requester.FullName,
-                    title: "Tiket Anda Disetujui",
-                    message: requesterMessage,
-                    ticketNumber: ticket.TicketNumber,
-                    // note: notification.Note
-                    note: approveNote
-                );
-                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Tiket Disetujui: {ticket.TicketNumber}", approveBody, ct);
-
                 if (ticket.TicketType == (byte)TicketTypeEnum.Procurement)
                 {
-                    var financeEmails = await GetEmailsByRoleAsync(Roles.Finance, ct);
-                    if (financeEmails.Count == 0) financeEmails = ["finance.team@asmara.local"];
-
+                    var currentStep = await uow.Tickets.GetCurrentStepAsync(ticket.Id, ct);
                     var items = notification.ProcurementItems ?? 
                         await uow.ProcurementDetails.QueryNoTracking().Where(p => p.TicketId == ticket.Id).ToListAsync(ct);
 
-                    var financeBody = EmailTemplates.Procurement(
-                        recipientName: "Tim Finance",
-                        title: "Tiket Masuk: Tinjauan Anggaran Pengadaan",
-                        message: $"Tiket pengadaan <strong>{ticket.TicketNumber}</strong> dari <strong>{requester.FullName}</strong> telah disetujui Manajer dan masuk ke Finance untuk ditinjau anggarannya.",
-                        ticketNumber: ticket.TicketNumber,
-                        items: items,
-                        // note: notification.Note
-                        note: approveNote
-                    );
-                    await emailService.SendEmailAsync(financeEmails, $"[ASMARA] Tiket Pengadaan Masuk: {ticket.TicketNumber}", financeBody, ct);
+                    if (currentStep == StepCodes.Purchasing)
+                    {
+                        var purchasingReqBody = EmailTemplates.Notification(
+                            recipientName: requester.FullName,
+                            title: "Anggaran Tiket Disetujui",
+                            message: $"Anggaran tiket pengadaan Anda telah disetujui oleh Finance (<strong>{actor.FullName}</strong>) dan diteruskan ke tim Purchasing untuk proses pembelian barang.",
+                            ticketNumber: ticket.TicketNumber,
+                            note: approveNote
+                        );
+                        await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Anggaran Pengadaan Disetujui: {ticket.TicketNumber}", purchasingReqBody, ct);
+
+                        var purchasingEmails = await GetEmailsByRoleAsync(Roles.Purchasing, ct);
+                        if (purchasingEmails.Count == 0) purchasingEmails = ["purchasing.team@asmara.local"];
+
+                        var purchasingBody = EmailTemplates.Procurement(
+                            recipientName: "Tim Purchasing",
+                            title: "Proses Pembelian Barang Pengadaan",
+                            message: $"Anggaran pengadaan tiket <strong>{ticket.TicketNumber}</strong> dari <strong>{requester.FullName}</strong> telah disetujui oleh Finance dan siap diproses pembelian barangnya oleh tim Purchasing.",
+                            ticketNumber: ticket.TicketNumber,
+                            items: items,
+                            note: approveNote
+                        );
+                        await emailService.SendEmailAsync(purchasingEmails, $"[ASMARA] Proses Pembelian Barang: {ticket.TicketNumber}", purchasingBody, ct);
+                    }
+                    else
+                    {
+                        var managerApprovedReqBody = EmailTemplates.Notification(
+                            recipientName: requester.FullName,
+                            title: "Tiket Anda Disetujui",
+                            message: $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan diteruskan ke Finance untuk peninjauan anggaran.",
+                            ticketNumber: ticket.TicketNumber,
+                            note: approveNote
+                        );
+                        await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Tiket Disetujui: {ticket.TicketNumber}", managerApprovedReqBody, ct);
+
+                        var financeEmails = await GetEmailsByRoleAsync(Roles.Finance, ct);
+                        if (financeEmails.Count == 0) financeEmails = ["finance.team@asmara.local"];
+
+                        var financeBody = EmailTemplates.Procurement(
+                            recipientName: "Tim Finance",
+                            title: "Tiket Masuk: Tinjauan Anggaran Pengadaan",
+                            message: $"Tiket pengadaan <strong>{ticket.TicketNumber}</strong> dari <strong>{requester.FullName}</strong> telah disetujui Manajer dan masuk ke Finance untuk ditinjau anggarannya.",
+                            ticketNumber: ticket.TicketNumber,
+                            items: items,
+                            note: approveNote
+                        );
+                        await emailService.SendEmailAsync(financeEmails, $"[ASMARA] Tiket Pengadaan Masuk: {ticket.TicketNumber}", financeBody, ct);
+                    }
                 }
                 else if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance)
                 {
+                    var maintApprovedReqBody = EmailTemplates.Notification(
+                        recipientName: requester.FullName,
+                        title: "Tiket Anda Disetujui",
+                        message: $"Tiket Anda telah disetujui oleh <strong>{actor.FullName}</strong> dan saat ini sedang diteruskan ke tahap berikutnya.",
+                        ticketNumber: ticket.TicketNumber,
+                        note: approveNote
+                    );
+                    await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Tiket Disetujui: {ticket.TicketNumber}", maintApprovedReqBody, ct);
+
                     var itSupportEmails = await GetEmailsByRoleAsync(Roles.ItSupport, ct);
                     if (itSupportEmails.Count == 0) itSupportEmails = ["itsupport.team@asmara.local"];
 
@@ -182,11 +214,40 @@ public class TicketNotificationHandler(
                         title: "Penugasan Perawatan Baru",
                         message: $"Tiket perawatan {ticket.TicketNumber} telah disetujui Manajer. Silakan buka aplikasi ASMARA untuk menugaskan teknisi penanggung jawab.",
                         ticketNumber: ticket.TicketNumber,
-                        // note: notification.Note,
                         note: approveNote,
                         extraInfo: extraInfo
                     );
                     await emailService.SendEmailAsync(itSupportEmails, $"[ASMARA] Penugasan Perawatan IT: {ticket.TicketNumber}", itBody, ct);
+                }
+                break;
+
+            case "cancel":
+                var cancelNote = !string.IsNullOrWhiteSpace(notification.Note) 
+                    ? notification.Note 
+                    : "Tiket telah dibatalkan atas permintaan pemohon.";
+
+                var cancelBody = EmailTemplates.Notification(
+                    recipientName: requester.FullName,
+                    title: "Tiket Dibatalkan",
+                    message: $"Tiket <strong>{ticket.TicketNumber}</strong> telah berhasil dibatalkan dan status tiket kini ditutup.",
+                    ticketNumber: ticket.TicketNumber,
+                    note: cancelNote
+                );
+                await emailService.SendEmailAsync(requester.Email, $"[ASMARA] Pembatalan Tiket: {ticket.TicketNumber}", cancelBody, ct);
+
+                var cancelManager = (ticket.CurrentTaskEmployeeId.HasValue ? await uow.Employees.GetByIdAsync(ticket.CurrentTaskEmployeeId.Value, ct) : null)
+                    ?? (requester.ManagerId.HasValue ? await uow.Employees.GetByIdAsync(requester.ManagerId.Value, ct) : null);
+
+                if (cancelManager != null && !string.IsNullOrWhiteSpace(cancelManager.Email) && cancelManager.Id != actor.Id)
+                {
+                    var mgrCancelBody = EmailTemplates.Notification(
+                        recipientName: cancelManager.FullName,
+                        title: "Tiket Dibatalkan oleh Pemohon",
+                        message: $"Staf Anda, <strong>{requester.FullName}</strong>, telah membatalkan tiket <strong>{ticket.TicketNumber}</strong>.",
+                        ticketNumber: ticket.TicketNumber,
+                        note: cancelNote
+                    );
+                    await emailService.SendEmailAsync(cancelManager.Email, $"[ASMARA] Pembatalan Tiket: {ticket.TicketNumber}", mgrCancelBody, ct);
                 }
                 break;
 
