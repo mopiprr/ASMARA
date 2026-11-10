@@ -1,4 +1,5 @@
 using ASMARA.API.Data.Repositories;
+using ASMARA.API.Enums;
 using ASMARA.API.Models.Inventory;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -47,7 +48,15 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
                 i.ItemCode,
                 i.ItemName,
                 i.Qty,
-                i.IsActive
+                i.IsActive,
+                i.ItemCategory.TrackingType,
+                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable
+                    ? i.Assets.Count(a => a.Status != (byte)AssetStatusEnum.Disposed
+                                       && a.Status != (byte)AssetStatusEnum.Archived)
+                    : null,
+                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable
+                    ? i.Assets.Count(a => a.Status == (byte)AssetStatusEnum.Available)
+                    : null
             ))
             .ToListAsync(ct);
     }

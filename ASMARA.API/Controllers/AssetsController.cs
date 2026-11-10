@@ -1,5 +1,6 @@
 ﻿using ASMARA.API.Common.Paging;
 using ASMARA.API.Common.Security;
+using ASMARA.API.Features.Catalog.Commands.AssignAsset;
 using ASMARA.API.Features.Catalog.Queries.GetAssets;
 using ASMARA.API.Features.Catalog.Queries.GetAssetsForMaintenance;
 using ASMARA.API.Features.Catalog.Queries.GetAssetStatistics;
@@ -28,4 +29,14 @@ public class AssetsController(ISender sender) : ControllerBase
     [Authorize(Roles = Roles.Inventory)]
     public async Task<ActionResult<AssetStatisticsDto>> GetStatistics(CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetAssetStatisticsQuery(), cancellationToken));
+
+    [HttpPost("{id:int}/assign")]
+    [Authorize(Roles = Roles.Inventory)]
+    public async Task<IActionResult> Assign(
+       int id, [FromBody] AssignAssetRequestDto request, CancellationToken cancellationToken)
+    {
+        await sender.Send(new AssignAssetCommand(id, request), cancellationToken);
+
+        return NoContent();
+    }
 }

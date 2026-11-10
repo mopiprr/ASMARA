@@ -47,4 +47,15 @@ public class AssetRepository(AsmaraDbContext context) : Repository<Asset>(contex
 
         return affected == 1;
     }
+
+    public async Task<bool> TryAssignToEmployeeAsync(int assetId, Guid? employeeId, CancellationToken ct = default)
+    {
+        var affected = await Set
+            .Where(a => a.Id == assetId && (a.Status == (byte)AssetStatusEnum.Available || a.Status == (byte)AssetStatusEnum.InUse))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.EmployeeId, employeeId)
+                .SetProperty(a => a.Status, (byte)AssetStatusEnum.InUse), ct);
+
+        return affected == 1;
+    }
 }

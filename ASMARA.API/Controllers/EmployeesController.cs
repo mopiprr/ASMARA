@@ -47,4 +47,9 @@ public class EmployeesController(ISender sender) : ControllerBase
 
         return CreatedAtAction(nameof(GetById), new { id }, employee);
     }
+
+    [HttpGet("options")]
+    [Authorize(Roles = Roles.Inventory)]
+    public async Task<ActionResult<IReadOnlyList<EmployeeOptionDto>>> GetEmployeeOptions(CancellationToken ct)
+        => Ok(await sender.Send(new GetEmployeeOptionsQuery(), ct));
 }

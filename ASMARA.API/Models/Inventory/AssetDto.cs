@@ -28,3 +28,5 @@ public record AssetStatisticsDto(
     int Available,
     int InUse,
     int UnderMaintenance);
+
+public record AssignAssetRequestDto(Guid? EmployeeId);

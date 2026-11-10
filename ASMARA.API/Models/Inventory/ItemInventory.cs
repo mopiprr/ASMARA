@@ -12,5 +12,8 @@ public class ItemInventory
         string ItemCode,
         string ItemName,
         int? Qty,
-        bool IsActive
+        bool IsActive,
+        byte TrackingType = 0,
+        int? TotalAssetCount = null,
+        int? AvailableAssetCount = null
     );

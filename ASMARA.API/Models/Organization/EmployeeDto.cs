@@ -58,3 +58,5 @@ public record CreateEmployeeRequestDto(
     string UserName,
     string Password,
     List<int>? RoleIds);
+
+public record EmployeeOptionDto(Guid Id, string EmployeeNumber, string FullName, string DepartmentName);
