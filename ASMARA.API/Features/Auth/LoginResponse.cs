@@ -1,4 +1,6 @@
-﻿namespace ASMARA.API.Features.Auth;
+﻿using System.Text.Json.Serialization;
+
+namespace ASMARA.API.Features.Auth;
 
 public class LoginResponse
 {
@@ -7,6 +9,15 @@ public class LoginResponse
     public DateTime ExpiresAt { get; set; }
 
     public LoginUserInfo User { get; set; } = new();
+
+    [JsonIgnore]
+    public string RefreshToken { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public DateTime RefreshTokenExpiresAt { get; set; }
+
+    [JsonIgnore]
+    public bool IsPersistent { get; set; }
 }
 
 public class LoginUserInfo

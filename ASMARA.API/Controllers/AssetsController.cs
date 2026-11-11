@@ -3,6 +3,7 @@ using ASMARA.API.Common.Security;
 using ASMARA.API.Features.Catalog.Commands.AssignAsset;
 using ASMARA.API.Features.Catalog.Queries.GetAssets;
 using ASMARA.API.Features.Catalog.Queries.GetAssetsForMaintenance;
+using ASMARA.API.Features.Catalog.Queries.GetAssetsForReplacement;
 using ASMARA.API.Features.Catalog.Queries.GetAssetStatistics;
 using ASMARA.API.Models.Inventory;
 using MediatR;
@@ -19,6 +20,11 @@ public class AssetsController(ISender sender) : ControllerBase
     [HttpGet("available-for-maintenance")]
     public async Task<ActionResult<IReadOnlyList<MaintenanceAssetOptionDto>>> GetAvailableForMaintenance(CancellationToken cancellationToken)
         => Ok(await sender.Send(new GetAssetsForMaintenanceQuery(), cancellationToken));
+
+    [HttpGet("available-for-replacement")]
+    [Authorize(Roles = Roles.Inventory)]
+    public async Task<ActionResult<IReadOnlyCollection<ReplacementAssetOptionDto>>> GetAvailableForReplacement([FromQuery] Guid ticketId, CancellationToken cancellationToken)
+        => Ok(await sender.Send(new GetAssetsForReplacementQuery(ticketId), cancellationToken));
 
     [HttpGet]
     [Authorize(Roles = Roles.Inventory)]

@@ -12,6 +12,12 @@ public record MaintenanceAssetOptionDto(
     string CategoryName,
     bool IsShared);
 
+public record ReplacementAssetOptionDto(
+    int AssetId,
+    string AssetTag,
+    string ItemName,
+    string CategoryName);
+
 public record AssetListItemDto(
     int Id,
     string AssetTag,
