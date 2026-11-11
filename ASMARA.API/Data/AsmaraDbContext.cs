@@ -28,6 +28,8 @@ public partial class AsmaraDbContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+
     public virtual DbSet<Ticket> Tickets { get; set; }
 
     public virtual DbSet<TicketWorkflowLog> TicketWorkflowLogs { get; set; }
@@ -247,6 +249,24 @@ public partial class AsmaraDbContext : DbContext
                         j.ToTable("AccountRole");
                         j.HasIndex(new[] { "AccountId" }, "IX_AccountRole_AccountId");
                     });
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("RefreshToken");
+
+            entity.HasIndex(e => e.AccountId, "IX_RefreshToken_AccountId");
+
+            entity.HasIndex(e => e.TokenHash, "UQ_RefreshToken_TokenHash").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newsequentialid())", "DF_RefreshToken_Id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_RefreshToken_CreatedAt");
+            entity.Property(e => e.TokenHash).HasMaxLength(64);
+
+            entity.HasOne(d => d.Account).WithMany(p => p.RefreshTokens)
+                .HasForeignKey(d => d.AccountId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RefreshToken_Account");
         });
 
         modelBuilder.Entity<Ticket>(entity =>
