@@ -1,7 +1,9 @@
 using ASMARA.API.Common.Security;
 using ASMARA.API.Features.Catalog.Commands.CreateInventoryItem;
 using ASMARA.API.Features.Catalog.Commands.DeleteInventoryItem;
+using ASMARA.API.Features.Catalog.Commands.DeleteInventoryUnits;
 using ASMARA.API.Features.Catalog.Commands.UpdateInventoryItem;
+using ASMARA.API.Features.Catalog.Queries.GetInventoryItemAssets;
 using ASMARA.API.Features.Catalog.Queries.GetInventoryItems;
 using ASMARA.API.Features.Catalog.Queries.GetItemCategories;
 using ASMARA.API.Models.Inventory;
@@ -18,13 +20,13 @@ public class InventoryController(IMediator mediator) : ControllerBase
 {
     /// <summary>
     /// Mengambil seluruh data barang inventaris (ItemInventory).
-    /// Mendukung filter kategori (?categoryId=1) dan pencarian teks (?search=dell).
+    /// Mendukung filter kategori (?categoryId=1), pencarian teks (?search=dell), dan status aktif (?onlyActive=false).
     /// </summary>
     [HttpGet("items")]
     public async Task<ActionResult<List<ItemInventoryResponseDto>>> GetItems(
         [FromQuery] int? categoryId,
         [FromQuery] string? search,
-        [FromQuery] bool onlyActive = true,
+        [FromQuery] bool onlyActive = false,
         CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetInventoryItemsQuery(categoryId, search, onlyActive), ct);
@@ -40,6 +42,19 @@ public class InventoryController(IMediator mediator) : ControllerBase
         CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetItemCategoriesQuery(onlyActive), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Mengambil seluruh unit fisik aset individual dari suatu barang Non-Consumable (AssetTag, status, pemegang).
+    /// </summary>
+    [HttpGet("items/{id:int}/assets")]
+    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    public async Task<ActionResult<List<InventoryItemAssetDto>>> GetItemAssets(
+        int id,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetInventoryItemAssetsQuery(id), ct);
         return Ok(result);
     }
 
@@ -69,6 +84,21 @@ public class InventoryController(IMediator mediator) : ControllerBase
         CancellationToken ct = default)
     {
         var result = await mediator.Send(new UpdateInventoryItemCommand(id, dto.ItemName, dto.ItemCategoryId, dto.NewStock, dto.IsActive), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Mengurangi kuantitas stok barang Consumable atau menghapus unit aset spesifik pada barang Non-Consumable.
+    /// Unit aset yang dihapus otomatis dicabut dari tabel Asset sehingga tidak lagi muncul di halaman /assets.
+    /// </summary>
+    [HttpPost("items/{id:int}/delete-units")]
+    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    public async Task<ActionResult<DeleteInventoryUnitsResultDto>> DeleteUnits(
+        int id,
+        [FromBody] DeleteInventoryUnitsRequestDto dto,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new DeleteInventoryUnitsCommand(id, dto), ct);
         return Ok(result);
     }
 

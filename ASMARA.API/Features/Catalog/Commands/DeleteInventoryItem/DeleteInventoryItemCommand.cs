@@ -32,7 +32,29 @@ public class DeleteInventoryItemCommandHandler(IUnitOfWork uow)
                 "Cannot delete or deactivate this item because some units are currently assigned to employees or in use.");
         }
 
-        // Soft delete
+        // Hapus unit aset yang berstatus Available agar tidak lagi muncul di halaman /assets
+        var availableAssets = item.Assets
+            .Where(a => a.Status == (byte)AssetStatusEnum.Available && a.EmployeeId == null)
+            .ToList();
+
+        foreach (var asset in availableAssets)
+        {
+            var hasMaintenanceHistory = await uow.MaintenanceDetails.QueryNoTracking()
+                .AnyAsync(m => m.AssetId == asset.Id || m.ReplacementAssetId == asset.Id, ct);
+
+            if (hasMaintenanceHistory)
+            {
+                asset.Status = (byte)AssetStatusEnum.Disposed;
+            }
+            else
+            {
+                uow.Assets.Remove(asset);
+                item.Assets.Remove(asset);
+            }
+        }
+
+        // Soft delete item dan set stok ke 0
+        item.Qty = 0;
         item.IsActive = false;
         await uow.SaveChangesAsync(ct);
 

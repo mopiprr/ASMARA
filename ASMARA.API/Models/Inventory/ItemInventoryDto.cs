@@ -27,3 +27,32 @@ public record UpdateInventoryItemRequestDto(
     int? NewStock = null,
     bool? IsActive = null
 );
+
+public record InventoryItemAssetDto(
+    int Id,
+    string AssetTag,
+    byte Status,
+    string StatusName,
+    Guid? EmployeeId,
+    string? EmployeeName,
+    string? DepartmentName,
+    bool CanDelete
+);
+
+public record DeleteInventoryUnitsRequestDto(
+    int? Quantity,
+    List<int>? AssetIds,
+    string Reason,
+    string? Notes = null,
+    bool DeactivateIfZero = false
+);
+
+public record DeleteInventoryUnitsResultDto(
+    int ItemId,
+    string ItemName,
+    int DeletedCount,
+    int? RemainingStock,
+    bool IsActive,
+    string Message
+);
+

@@ -9,7 +9,7 @@ namespace ASMARA.API.Features.Catalog.Queries.GetInventoryItems;
 public record GetInventoryItemsQuery(
     int? CategoryId = null,
     string? Search = null,
-    bool OnlyActive = true
+    bool OnlyActive = false
 ) : IRequest<List<ItemInventoryResponseDto>>;
 
 public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
@@ -37,8 +37,6 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
             var term = request.Search.Trim().ToLower();
             query = query.Where(i => i.ItemName.ToLower().Contains(term) || i.ItemCode.ToLower().Contains(term));
         }
-
-        var assetStatusAvailable = (byte)AssetStatusEnum.Available;
 
         return await query
             .OrderBy(i => i.ItemCategory.CategoryName)

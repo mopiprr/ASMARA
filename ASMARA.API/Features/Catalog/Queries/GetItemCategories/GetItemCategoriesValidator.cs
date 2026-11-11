@@ -6,7 +6,5 @@ public class GetItemCategoriesValidator : AbstractValidator<GetItemCategoriesQue
 {
     public GetItemCategoriesValidator()
     {
-        RuleFor(x => x.OnlyActive)
-            .Equal(true);
     }
 }
