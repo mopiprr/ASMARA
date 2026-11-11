@@ -43,4 +43,6 @@ public partial class Ticket
     public virtual ICollection<ProcurementDetail> ProcurementDetails { get; set; } = new List<ProcurementDetail>();
 
     public virtual ICollection<TicketWorkflowLog> TicketWorkflowLogs { get; set; } = new List<TicketWorkflowLog>();
+
+    public virtual ICollection<BudgetLog> BudgetLogs { get; set; } = new List<BudgetLog>();
 }

@@ -15,6 +15,8 @@ public interface IUnitOfWork
     ITicketWorkflowLogRepository TicketWorkflowLogs { get; }
     IWorkflowRepository Workflows { get; }
     IWorkflowStepRepository WorkflowSteps { get; }
+    IDepartmentBudgetRepository DepartmentBudgets { get; }
+    IBudgetLogRepository BudgetLogs { get; }
 
     Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> action, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);
