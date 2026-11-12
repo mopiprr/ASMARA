@@ -1,6 +1,6 @@
 ﻿using ASMARA.API.Common.Security;
 using ASMARA.API.Entities;
-using ASMARA.API.Features.Auth;
+using ASMARA.API.Services.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -91,6 +91,8 @@ public static class SecurityExtensions
         services.AddScoped<ITokenService, TokenService>();
 
         services.AddScoped<AuthSessionService>();
+
+        services.AddHostedService<RefreshTokenCleanupService>();
 
         // Password Hasher
         services.AddScoped<

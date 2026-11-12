@@ -1,5 +1,6 @@
 ﻿using ASMARA.API.Common.Security;
 using ASMARA.API.Data;
+using ASMARA.API.Services.Auth;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 

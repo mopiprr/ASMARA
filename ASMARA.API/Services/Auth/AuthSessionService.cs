@@ -1,26 +1,14 @@
 ﻿using ASMARA.API.Common.Security;
 using ASMARA.API.Data;
+using ASMARA.API.Features.Auth;
 using Microsoft.Extensions.Options;
 using AccountEntity = ASMARA.API.Entities.Account;
 using RefreshTokenEntity = ASMARA.API.Entities.RefreshToken;
 
-namespace ASMARA.API.Features.Auth;
+namespace ASMARA.API.Services.Auth;
 
-public class AuthSessionService
+public class AuthSessionService(AsmaraDbContext context, ITokenService tokenService, IOptions<JwtOptions> jwtOptions)
 {
-    private readonly AsmaraDbContext _context;
-    private readonly ITokenService _tokenService;
-    private readonly JwtOptions _jwtOptions;
-
-    public AuthSessionService(
-        AsmaraDbContext context,
-        ITokenService tokenService,
-        IOptions<JwtOptions> jwtOptions)
-    {
-        _context = context;
-        _tokenService = tokenService;
-        _jwtOptions = jwtOptions.Value;
-    }
 
     public static List<UserRoleInfo> GetActiveRoles(AccountEntity account)
         => account.Roles
@@ -37,23 +25,23 @@ public class AuthSessionService
     {
         var now = DateTime.UtcNow;
 
-        var (accessToken, expiresAt) = _tokenService.CreateAccessToken(
+        var (accessToken, expiresAt) = tokenService.CreateAccessToken(
             account,
             roles.Select(role => role.RoleCode));
 
-        var refreshToken = _tokenService.CreateRefreshToken();
-        var refreshExpiresAt = now.AddMinutes(_jwtOptions.RefreshTokenMinutes);
+        var refreshToken = tokenService.CreateRefreshToken();
+        var refreshExpiresAt = now.AddMinutes(jwtOptions.Value.RefreshTokenMinutes);
 
-        _context.RefreshTokens.Add(new RefreshTokenEntity
+        context.RefreshTokens.Add(new RefreshTokenEntity
         {
             AccountId = account.Id,
-            TokenHash = _tokenService.HashToken(refreshToken),
+            TokenHash = tokenService.HashToken(refreshToken),
             IsPersistent = isPersistent,
             CreatedAt = now,
             ExpiresAt = refreshExpiresAt
         });
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
         return new LoginResponse
         {

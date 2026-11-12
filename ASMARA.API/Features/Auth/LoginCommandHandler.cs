@@ -3,6 +3,7 @@ using AccountEntity = ASMARA.API.Entities.Account;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ASMARA.API.Services.Auth;
 
 namespace ASMARA.API.Features.Auth;
 

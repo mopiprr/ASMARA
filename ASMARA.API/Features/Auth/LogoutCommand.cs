@@ -15,12 +15,9 @@ public class LogoutCommandHandler(AsmaraDbContext context, ITokenService tokenSe
             return;
 
         var hash = tokenService.HashToken(command.RefreshToken);
-        var now = DateTime.UtcNow;
 
         await context.RefreshTokens
-            .Where(t => t.TokenHash == hash && t.RevokedAt == null)
-            .ExecuteUpdateAsync(
-                s => s.SetProperty(t => t.RevokedAt, (DateTime?)now),
-                ct);
+            .Where(t => t.TokenHash == hash)
+            .ExecuteDeleteAsync(ct);
     }
 }
