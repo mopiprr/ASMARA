@@ -18,6 +18,8 @@ public class UnitOfWork(AsmaraDbContext context) : IUnitOfWork
     private ITicketWorkflowLogRepository? _ticketWorkflowLogs;
     private IWorkflowRepository? _workflows;
     private IWorkflowStepRepository? _workflowSteps;
+    private IDepartmentBudgetRepository? _departmentBudgets;
+    private IBudgetLogRepository? _budgetLogs;
 
     public IAccountRepository Accounts => _accounts ??= new AccountRepository(context);
     public IAssetRepository Assets => _assets ??= new AssetRepository(context);
@@ -32,6 +34,8 @@ public class UnitOfWork(AsmaraDbContext context) : IUnitOfWork
     public ITicketWorkflowLogRepository TicketWorkflowLogs => _ticketWorkflowLogs ??= new TicketWorkflowLogRepository(context);
     public IWorkflowRepository Workflows => _workflows ??= new WorkflowRepository(context);
     public IWorkflowStepRepository WorkflowSteps => _workflowSteps ??= new WorkflowStepRepository(context);
+    public IDepartmentBudgetRepository DepartmentBudgets => _departmentBudgets ??= new DepartmentBudgetRepository(context);
+    public IBudgetLogRepository BudgetLogs => _budgetLogs ??= new BudgetLogRepository(context);
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {

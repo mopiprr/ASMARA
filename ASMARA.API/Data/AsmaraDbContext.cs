@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Entities;
+using ASMARA.API.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Data;
@@ -37,6 +37,10 @@ public partial class AsmaraDbContext : DbContext
     public virtual DbSet<Workflow> Workflows { get; set; }
 
     public virtual DbSet<WorkflowStep> WorkflowSteps { get; set; }
+
+    public virtual DbSet<DepartmentBudget> DepartmentBudgets { get; set; }
+
+    public virtual DbSet<BudgetLog> BudgetLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -348,6 +352,52 @@ public partial class AsmaraDbContext : DbContext
                 .HasForeignKey(d => d.WorkflowId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_WorkflowStep_Workflow");
+        });
+
+        modelBuilder.Entity<DepartmentBudget>(entity =>
+        {
+            entity.ToTable("DepartmentBudget");
+
+            entity.HasIndex(e => new { e.DepartmentId, e.FiscalYear }, "UQ_DepartmentBuget_Dept_Year").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newsequentialid())", "DF_DepartmentBudget_Id");
+            entity.Property(e => e.AllocatedBudget).HasColumnType("decimal(18, 2)").HasDefaultValue(0m, "DF_DepartmentBudget_AllocatedBudget");
+            entity.Property(e => e.SpentBudget).HasColumnType("decimal(18,2)").HasDefaultValue(0m, "DF_DepartmentBudget_SpentBudget");
+            entity.Property(e => e.CommittedBudget).HasColumnType("decimal(18,2)").HasDefaultValue(0m, "DF_DepartmentBudget_CommittedBudget");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_DepartmentBudget_CreatedAt");
+
+            entity.HasOne(d => d.Department).WithMany(p => p.DepartmentBudgets)
+            .HasForeignKey(d => d.DepartmentId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_DepartmentBudget_Department");
+        });
+
+        modelBuilder.Entity<BudgetLog>(entity =>
+        {
+            entity.ToTable("BudgetLog");
+
+            entity.HasIndex(e => new { e.LogNumber }, "UQ_BudgetLog_LogNumber").IsUnique();
+
+            entity.Property(e => e.Id).HasDefaultValueSql("(newsequentialid())", "DF_BudgetLog_Id");
+            entity.Property(e => e.LogNumber).HasMaxLength(30);
+            entity.Property(e => e.Amount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PreviousAllocated).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.NewAllocated).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PreviousRemaining).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.NewRemaining).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())", "DF_BudgetLog_CreatedAt");
+
+            entity.HasOne(d => d.DepartmentBudget).WithMany(p => p.BudgetLogs)
+            .HasForeignKey(d => d.DepartmentBudgetId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_BudgetLog_DepartmentBudget");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.BudgetLogs)
+            .HasForeignKey(d => d.TicketId)
+            .HasConstraintName("FK_BudgetLog_Ticket");
+
+            entity.HasIndex(e => e.CreatedByEmployeeId, "IX_BudgetLog_CreatedByEmployeeId");
         });
 
         OnModelCreatingPartial(modelBuilder);
