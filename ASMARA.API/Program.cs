@@ -44,13 +44,18 @@ try
     builder.Services.AddAsmaraOpenApi();
 
     // CORS
+    var allowedOrigins = builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>() ?? ["http://localhost:5173"];
+
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(policy =>
         {
+            policy.WithOrigins(allowedOrigins);
             policy.AllowAnyHeader();
             policy.AllowAnyMethod();
-            policy.AllowAnyOrigin();
+            policy.AllowCredentials();
 
             policy.WithExposedHeaders("X-Correlation-Id");
         });

@@ -17,4 +17,5 @@ public partial class Department
     public virtual ICollection<Department> InverseParentDepartment { get; set; } = new List<Department>();
 
     public virtual Department? ParentDepartment { get; set; }
+    public virtual ICollection<DepartmentBudget> DepartmentBudgets { get; set; } = new List<DepartmentBudget>();
 }

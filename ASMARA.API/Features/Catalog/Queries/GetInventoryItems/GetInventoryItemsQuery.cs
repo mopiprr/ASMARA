@@ -9,7 +9,7 @@ namespace ASMARA.API.Features.Catalog.Queries.GetInventoryItems;
 public record GetInventoryItemsQuery(
     int? CategoryId = null,
     string? Search = null,
-    bool OnlyActive = true
+    bool OnlyActive = false
 ) : IRequest<List<ItemInventoryResponseDto>>;
 
 public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
@@ -50,18 +50,17 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
                 i.ItemCategory.CategoryName,
                 i.ItemCode,
                 i.ItemName,
-                i.ItemCategory.TrackingType == consumable
-                    ? (i.Qty ?? 0)
-                    : i.Assets.Count(a => a.Status == availableStatus),
+                i.Qty,
                 i.IsActive,
                 i.ItemCategory.TrackingType,
-                i.ItemCategory.TrackingType == consumable
-                    ? null
-                    : (int?)i.Assets.Count(),
-                i.ItemCategory.TrackingType == consumable
-                    ? null
-                    : (int?)i.Assets.Count(a => a.Status == availableStatus)
-            ))
+                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable
+                    ? i.Assets.Count(a => a.Status != (byte)AssetStatusEnum.Disposed
+                                       && a.Status != (byte)AssetStatusEnum.Archived)
+                    : null,
+                i.ItemCategory.TrackingType == (byte)TrackingTypeEnum.NonConsumable
+                    ? i.Assets.Count(a => a.Status == (byte)AssetStatusEnum.Available)
+                    : null
+              ))
             .ToListAsync(ct);
     }
 }

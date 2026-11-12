@@ -10,5 +10,9 @@ public class JwtOptions
 
     public string Key { get; set; } = string.Empty;
 
-    public int ExpiresMinutes { get; set; } = 60;
+    public int ExpiresMinutes { get; set; } = 15;
+
+    public int RefreshTokenMinutes { get; set; } = 60;
+
+    public int RefreshTokenCleanupMinutes { get; set; } = 30;
 }

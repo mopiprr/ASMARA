@@ -23,7 +23,10 @@ public class GetAssetsQueryHandler(IUnitOfWork uow) : IRequestHandler<GetAssetsQ
 
     public async Task<PagedResult<AssetListItemDto>> Handle(GetAssetsQuery request, CancellationToken ct)
     {
-        var query = uow.Assets.QueryNoTracking();
+        var query = uow.Assets.QueryNoTracking()
+            .Where(a => a.Item.IsActive &&
+                        a.Status != (byte)AssetStatusEnum.Disposed &&
+                        a.Status != (byte)AssetStatusEnum.Archived);
 
         if (request.Status.HasValue)
         {

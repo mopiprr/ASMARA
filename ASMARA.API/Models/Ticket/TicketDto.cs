@@ -32,7 +32,8 @@ public record TicketResponseDto(
     bool CanAssignHandler = false,
     bool CanSendItem = false,
     bool CanReceiveItem = false,
-    string? PurchaseProofFileName = null
+    string? PurchaseProofFileName = null,
+    string? RequesterDepartment = null
 );
 
 public record TicketWorkflowHistoryDto(
@@ -65,7 +66,8 @@ public record PendingTicketListItemDto(
     string RequesterName,
     DateTime CreatedAt,
     string CurrentStep,
-    string CurrentStepName);
+    string CurrentStepName,
+    string? RequesterDepartment = null);
 
 public record MyTicketStatisticsDto(
     int TotalRequests,

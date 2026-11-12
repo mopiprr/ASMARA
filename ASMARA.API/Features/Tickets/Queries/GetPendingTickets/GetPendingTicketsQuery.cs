@@ -141,6 +141,7 @@ public class GetPendingTicketsQueryHandler(
             t.Subject,
             RequesterId = t.EmployeeId,
             RequesterName = t.Employee.FullName,
+            RequesterDepartment = t.Employee.Department != null ? t.Employee.Department.DepartmentName : null,
             t.CreatedAt,
             CurrentStep = t.TicketWorkflowLogs
                 .OrderByDescending(log => log.CreatedAt)
@@ -167,7 +168,8 @@ public class GetPendingTicketsQueryHandler(
                         s.Workflow.TicketType == t.TicketType &&
                         s.Workflow.IsActive)
                     .Select(s => s.Name)
-                    .FirstOrDefault() ?? t.CurrentStep
+                    .FirstOrDefault() ?? t.CurrentStep,
+                t.RequesterDepartment
             ))
             .ToPagedResultAsync(
                 request.Page,

@@ -1,5 +1,6 @@
 ﻿using ASMARA.API.Common.Security;
 using ASMARA.API.Entities;
+using ASMARA.API.Services.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +30,9 @@ public static class SecurityExtensions
             .Validate(
                 o => o.ExpiresMinutes > 0,
                 "Jwt:ExpiresMinutes harus lebih dari 0.")
+            .Validate(
+                o => o.RefreshTokenMinutes > 0,
+                "Jwt:RefreshTokenMinutes harus lebih dari 0.")
             .ValidateOnStart();
 
         // Get JWT configuration
@@ -83,6 +87,12 @@ public static class SecurityExtensions
         services.AddHttpContextAccessor();
 
         services.AddScoped<ICurrentUser, CurrentUser>();
+
+        services.AddScoped<ITokenService, TokenService>();
+
+        services.AddScoped<AuthSessionService>();
+
+        services.AddHostedService<RefreshTokenCleanupService>();
 
         // Password Hasher
         services.AddScoped<

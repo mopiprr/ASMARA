@@ -16,7 +16,8 @@ public record GetAllMyTicketsQuery(
     int Page = 1,
     int PageSize = 10,
     bool Desc = false,
-    bool? IsClosed = null)
+    bool? IsClosed = null,
+    bool IncludeSubordinates = false)
     : IRequest<PagedResult<TicketListItemDto>>;
 
 public class GetAllMyTicketsQueryHandler(IUnitOfWork uow,
@@ -29,8 +30,17 @@ public class GetAllMyTicketsQueryHandler(IUnitOfWork uow,
     {
         var employeeId = currentUser.EmployeeId;
 
-        var query = uow.Tickets.QueryNoTracking()
-            .Where(t => t.EmployeeId == employeeId);
+        var query = uow.Tickets.QueryNoTracking();
+
+        if (request.IncludeSubordinates)
+        {
+            var targetEmployeeIds = await SubordinateService.GetSubordinateAndSelfIdsAsync(employeeId, uow, ct);
+            query = query.Where(t => targetEmployeeIds.Contains(t.EmployeeId));
+        }
+        else
+        {
+            query = query.Where(t => t.EmployeeId == employeeId);
+        }
 
         if (request.IsClosed.HasValue)
         {

@@ -6,8 +6,6 @@ public class GetInventoryItemsValidator : AbstractValidator<GetInventoryItemsQue
 {
     public GetInventoryItemsValidator()
     {
-        RuleFor(x => x.OnlyActive)
-            .Equal(true);
         When(x => x.CategoryId.HasValue, () =>
         {
             RuleFor(x => x.CategoryId!.Value)

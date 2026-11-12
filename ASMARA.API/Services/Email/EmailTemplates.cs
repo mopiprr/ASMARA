@@ -27,7 +27,6 @@ public static class EmailTemplates
                     <p style="color: #475569; line-height: 1.5; font-size: 14px;">{message}</p>
                     <div style="background: #f1f5f9; padding: 12px 16px; border-radius: 6px; margin: 15px 0; font-size: 13px; line-height: 1.6;">
                         <p style="margin: 4px 0;"><strong>Nomor Tiket:</strong> {ticketNumber}</p>
-                        // {(string.IsNullOrWhiteSpace(note) ? "" : $"<p style='margin: 4px 0;'><strong>Catatan:</strong> {note}</p>")}
                         {(string.IsNullOrWhiteSpace(extraInfo) ? "" : $"<div style='margin-top: 6px;'>{extraInfo}</div>")}
                     </div>
                     {(string.IsNullOrWhiteSpace(note) ? "" : $"""
@@ -82,7 +81,6 @@ public static class EmailTemplates
                     <p style="color: #475569; line-height: 1.5; font-size: 14px;">{message}</p>
                     <div style="background: #f1f5f9; padding: 12px 16px; border-radius: 6px; margin: 15px 0; font-size: 13px;">
                         <p style="margin: 4px 0;"><strong>Nomor Tiket:</strong> {ticketNumber}</p>
-                        // {(string.IsNullOrWhiteSpace(note) ? "" : $"<p style='margin: 4px 0;'><strong>Catatan:</strong> {note}</p>")}
                     </div>
                     {(string.IsNullOrWhiteSpace(note) ? "" : $"""
                     <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; border-radius: 4px; font-size: 13px; line-height: 1.5;">

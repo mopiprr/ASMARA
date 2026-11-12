@@ -121,7 +121,39 @@ public class ReceiveProcurementGoodsCommandHandler(
                     }
                 }
 
-                // 5. Simpan transisi + bukti + stok + aset sekaligus
+                // 5. Update budget departemen pemohon: kurangi komitmen, tambah realisasi (Spent)
+                var ticketTotal = ticket.ProcurementDetails.Sum(p => p.Quantity * p.Price);
+                var currentYear = DateTime.UtcNow.Year;
+                var deptBudget = await uow.DepartmentBudgets.Query()
+                    .FirstOrDefaultAsync(b => b.DepartmentId == ticket.Employee.DepartmentId && b.FiscalYear == currentYear, txCt);
+
+                if (deptBudget != null)
+                {
+                    var prevRemaining = deptBudget.AllocatedBudget - deptBudget.SpentBudget - deptBudget.CommittedBudget;
+                    deptBudget.CommittedBudget = Math.Max(0, deptBudget.CommittedBudget - ticketTotal);
+                    deptBudget.SpentBudget += ticketTotal;
+                    deptBudget.UpdatedAt = DateTime.UtcNow;
+
+                    var newRemaining = deptBudget.AllocatedBudget - deptBudget.SpentBudget - deptBudget.CommittedBudget;
+                    var logCount = await uow.BudgetLogs.QueryNoTracking().CountAsync(txCt) + 1;
+                    uow.BudgetLogs.Add(new BudgetLog
+                    {
+                        DepartmentBudgetId = deptBudget.Id,
+                        TicketId = ticket.Id,
+                        LogNumber = $"LOG-{DateTime.UtcNow:yyyyMM}-{logCount:D4}",
+                        ChangeType = (byte)BudgetChangeTypeEnum.TicketRealization,
+                        Amount = ticketTotal,
+                        PreviousAllocated = deptBudget.AllocatedBudget,
+                        NewAllocated = deptBudget.AllocatedBudget,
+                        PreviousRemaining = prevRemaining,
+                        NewRemaining = newRemaining,
+                        Description = $"Expense realized for completed Procurement Ticket #{ticket.TicketNumber} (Goods received)",
+                        CreatedByEmployeeId = currentUser.EmployeeId,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                // 6. Simpan transisi + bukti + stok + aset + budget sekaligus
                 await uow.SaveChangesAsync(txCt);
 
                 return (ticket, flowResult);

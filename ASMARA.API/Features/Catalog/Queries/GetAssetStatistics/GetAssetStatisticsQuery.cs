@@ -13,6 +13,9 @@ public class GetAssetStatisticsQueryHandler(IUnitOfWork uow) : IRequestHandler<G
     public async Task<AssetStatisticsDto> Handle(GetAssetStatisticsQuery request, CancellationToken ct)
     {
         var counts = await uow.Assets.QueryNoTracking()
+            .Where(a => a.Item.IsActive &&
+                        a.Status != (byte)AssetStatusEnum.Disposed &&
+                        a.Status != (byte)AssetStatusEnum.Archived)
             .GroupBy(a => a.Status)
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToListAsync(ct);

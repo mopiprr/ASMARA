@@ -156,7 +156,11 @@ public class GetPendingTicketByIdQueryHandler(
                         p.Price,
                         p.Quantity * p.Price,
                         p.CreatedAt))
-                    .ToList()
+                    .ToList(),
+                null,
+                false, false, false, false, false, false, false, false,
+                t.PurchaseProofFileName,
+                t.Employee.Department != null ? t.Employee.Department.DepartmentName : null
             ))
             .FirstOrDefaultAsync(ct);
 
