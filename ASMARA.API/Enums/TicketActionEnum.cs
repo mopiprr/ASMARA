@@ -18,6 +18,7 @@ public enum TicketActionEnum
     PartAvailable,
     PartUnavailable,
     OrderPart,
+    SendPart,
     ChildCompleted,
     Dispose,
     Archive,

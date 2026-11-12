@@ -27,7 +27,7 @@ public static class TransitionMap
     public static bool IsTerminal(TicketTypeEnum type, string step)
         => TerminalByType.TryGetValue(type, out var set) && set.Contains(step);
 
-    
+
     public static IReadOnlySet<string> StepsOf(TicketTypeEnum type)
         => StepsByType.TryGetValue(type, out var set) ? set : new HashSet<string>();
 

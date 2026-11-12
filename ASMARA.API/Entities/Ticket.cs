@@ -28,10 +28,6 @@ public partial class Ticket
 
     public Guid? CurrentTaskEmployeeId { get; set; }
 
-    public string? PurchaseProofFileName { get; set; }
-
-    public string? PurchaseProofPath { get; set; }
-
     public virtual Employee Employee { get; set; } = null!;
 
     public virtual ICollection<Ticket> InverseParentTicket { get; set; } = new List<Ticket>();

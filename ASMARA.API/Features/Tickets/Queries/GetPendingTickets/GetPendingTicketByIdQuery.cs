@@ -28,7 +28,10 @@ public class GetPendingTicketByIdQueryHandler(
         var roles = currentUser.Roles;
         var roleLevels = LevelRoleMap.LevelsFor(roles);
 
-        // 1. Ambil tiket aktif.
+        // =========================================
+        // 1. GET ACTIVE TICKET
+        // =========================================
+
         var ticket = await uow.Tickets.QueryNoTracking()
             .Include(t => t.TicketWorkflowLogs)
             .FirstOrDefaultAsync(
@@ -41,14 +44,20 @@ public class GetPendingTicketByIdQueryHandler(
                 $"Pending ticket {query.Id} was not found or is not awaiting action from you.");
         }
 
-        // 2. Tentukan current step berdasarkan workflow history.
+        // =========================================
+        // 2. GET CURRENT WORKFLOW STEP
+        // =========================================
+
         var currentStep = ticket.TicketWorkflowLogs
             .OrderByDescending(log => log.CreatedAt)
             .ThenByDescending(log => log.Id)
             .Select(log => log.ToStep)
             .FirstOrDefault() ?? StepCodes.Created;
 
-        // 3. Ambil level workflow.
+        // =========================================
+        // 3. GET WORKFLOW LEVEL
+        // =========================================
+
         int? stepLevel;
 
         if (currentStep == StepCodes.Created)
@@ -68,7 +77,23 @@ public class GetPendingTicketByIdQueryHandler(
 
         var ticketType = (TicketTypeEnum)ticket.TicketType;
 
-        // 4. Validasi hak akses user untuk melihat pending ticket.
+        // =========================================
+        // 4. CHECK ASSIGNED HANDLER
+        // =========================================
+
+        var isAssignedHandler =
+            ticket.AssignedToEmployeeId == employeeId;
+
+        var isHandlerStep =
+            currentStep == StepCodes.HandlerReceiveItem ||
+            currentStep == StepCodes.RepairInProgress ||
+            currentStep == StepCodes.HandlerReceivePart ||
+            currentStep == StepCodes.HandlerReturnItem;
+
+        // =========================================
+        // 5. CHECK TICKET VISIBILITY
+        // =========================================
+
         bool canView;
 
         if (ticketType == TicketTypeEnum.Procurement)
@@ -83,9 +108,9 @@ public class GetPendingTicketByIdQueryHandler(
         }
         else
         {
-            // Pertahankan mekanisme akses Pending Maintenance.
             canView =
                 ticket.CurrentTaskEmployeeId == employeeId ||
+                (isAssignedHandler && isHandlerStep) ||
                 (
                     stepLevel.HasValue &&
                     roleLevels.Contains(stepLevel.Value) &&
@@ -102,7 +127,10 @@ public class GetPendingTicketByIdQueryHandler(
                 $"Pending ticket {query.Id} was not found or is not awaiting action from you.");
         }
 
-        // 5. Ambil detail tiket.
+        // =========================================
+        // 6. GET TICKET DETAIL
+        // =========================================
+
         var dto = await uow.Tickets.QueryNoTracking()
             .Where(t =>
                 t.Id == query.Id &&
@@ -166,7 +194,10 @@ public class GetPendingTicketByIdQueryHandler(
                 $"Pending ticket {query.Id} was not found.");
         }
 
-        // 6. Tentukan hak akses tombol berdasarkan jenis tiket.
+        // =========================================
+        // 7. INITIALIZE PERMISSIONS
+        // =========================================
+
         var canApprove = false;
         var canRevise = false;
         var canReject = false;
@@ -176,6 +207,27 @@ public class GetPendingTicketByIdQueryHandler(
         var canAssignHandler = false;
         var canSendItem = false;
         var canReceiveItem = false;
+
+        var canSubmitRepairResult = false;
+        var canReceivePart = false;
+
+        var canCheckPart = false;
+        var canOrderPart = false;
+        var canSendPart = false;
+
+        var canReviewRepairResult = false;
+
+        // Division Manager
+        var canArchive = false;
+        var canDispose = false;
+
+        // Inventory Replacement
+        var canProcessReplacement = false;
+        var canSendReplacement = false;
+
+        // =========================================
+        // 8. PROCUREMENT PERMISSIONS
+        // =========================================
 
         if (ticketType == TicketTypeEnum.Procurement)
         {
@@ -234,9 +286,13 @@ public class GetPendingTicketByIdQueryHandler(
                     ct);
             }
         }
+
+        // =========================================
+        // 9. MAINTENANCE PERMISSIONS
+        // =========================================
+
         else if (ticketType == TicketTypeEnum.Maintenance)
         {
-            // Hitung hak akses berdasarkan workflow Maintenance.
             var canAct = TaskAccess.CanActOn(
                 ticket,
                 stepLevel,
@@ -250,35 +306,190 @@ public class GetPendingTicketByIdQueryHandler(
             bool Can(TicketActionEnum action)
                 => canAct && allowedActions.Contains(action);
 
-            // Department Manager.
+            // -------------------------------------
+            // Department Manager
+            // -------------------------------------
+
             canApprove = Can(TicketActionEnum.Approve);
             canReject = Can(TicketActionEnum.Reject);
 
-            // IT Support.
+            // -------------------------------------
+            // Division Manager
+            // -------------------------------------
+
+            canArchive =
+                currentStep == StepCodes.DivisionManagerReview &&
+                Can(TicketActionEnum.Archive);
+
+            canDispose =
+                currentStep == StepCodes.DivisionManagerReview &&
+                Can(TicketActionEnum.Dispose);
+
+            // -------------------------------------
+            // IT Support
+            // -------------------------------------
+
             canAssignHandler = Can(TicketActionEnum.AssignHandler);
 
-            // Maintenance workflow actions.
-            canSendItem = Can(TicketActionEnum.Send);
-            canReceiveItem = Can(TicketActionEnum.Receive);
+            canReviewRepairResult =
+                Can(TicketActionEnum.Approve) &&
+                currentStep == StepCodes.ItSupportResultReview;
+
+            // -------------------------------------
+            // Requester / Handler
+            // -------------------------------------
+
+            canSendItem =
+                Can(TicketActionEnum.Send) ||
+                (
+                    isAssignedHandler &&
+                    currentStep == StepCodes.HandlerReturnItem
+                );
+
+            canReceiveItem =
+                Can(TicketActionEnum.Receive) ||
+                (
+                    isAssignedHandler &&
+                    currentStep == StepCodes.HandlerReceiveItem
+                );
+
+            // -------------------------------------
+            // Maintenance Handler Decision
+            // -------------------------------------
+
+            canSubmitRepairResult =
+                isAssignedHandler &&
+                currentStep == StepCodes.RepairInProgress &&
+                (
+                    allowedActions.Contains(TicketActionEnum.Repaired) ||
+                    allowedActions.Contains(TicketActionEnum.Unrepairable) ||
+                    allowedActions.Contains(TicketActionEnum.NeedPart)
+                );
+
+            // -------------------------------------
+            // Handler Receives Spare Part
+            // -------------------------------------
+
+            canReceivePart =
+                isAssignedHandler &&
+                currentStep == StepCodes.HandlerReceivePart &&
+                allowedActions.Contains(TicketActionEnum.Receive);
+
+            // -------------------------------------
+            // Inventory - Spare Part
+            // -------------------------------------
+
+            canCheckPart =
+                Can(TicketActionEnum.PartAvailable) ||
+                Can(TicketActionEnum.PartUnavailable);
+
+            canOrderPart = Can(TicketActionEnum.OrderPart);
+
+            canSendPart = Can(TicketActionEnum.SendPart);
+
+            // -------------------------------------
+            // Inventory - Replacement Decision
+            // -------------------------------------
+
+            var isInventoryReplacementStep =
+                currentStep == StepCodes.InventoryDispose ||
+                currentStep == StepCodes.InventoryArchive;
+
+            canProcessReplacement =
+                isInventoryReplacementStep &&
+                Can(TicketActionEnum.ReplacementAvailable) &&
+                Can(TicketActionEnum.ReplacementUnavailable);
+
+            // -------------------------------------
+            // Inventory - Send Replacement
+            // -------------------------------------
+
+            canSendReplacement =
+                currentStep == StepCodes.InventorySendReplacement &&
+                Can(TicketActionEnum.Send);
         }
 
-        var historyItems = await history.GetHistoryAsync(query.Id, ct);
+        // =========================================
+        // 10. WORKFLOW HISTORY
+        // =========================================
 
-        // 7. Kembalikan DTO beserta hak akses user.
+        var historyItems = await history.GetHistoryAsync(
+            query.Id,
+            ct);
+
+        // =========================================
+        // 11. DEBUG PERMISSIONS
+        // =========================================
+
+        Console.WriteLine("========== PENDING TICKET PERMISSION DEBUG ==========");
+        Console.WriteLine($"Ticket Number           : {ticket.TicketNumber}");
+        Console.WriteLine($"Ticket Type             : {ticketType}");
+        Console.WriteLine($"Current Step            : {currentStep}");
+        Console.WriteLine($"Login Employee ID       : {employeeId}");
+        Console.WriteLine($"Assigned Handler ID     : {ticket.AssignedToEmployeeId}");
+        Console.WriteLine($"Current Task Employee ID: {ticket.CurrentTaskEmployeeId}");
+        Console.WriteLine($"Step Level              : {stepLevel}");
+        Console.WriteLine($"Is Assigned Handler     : {isAssignedHandler}");
+        Console.WriteLine($"Can Approve             : {canApprove}");
+        Console.WriteLine($"Can Reject              : {canReject}");
+        Console.WriteLine($"Can Assign Handler      : {canAssignHandler}");
+        Console.WriteLine($"Can Submit Repair Result: {canSubmitRepairResult}");
+        Console.WriteLine($"Can Receive Part        : {canReceivePart}");
+        Console.WriteLine($"Can Review Repair       : {canReviewRepairResult}");
+        Console.WriteLine($"Can Check Part          : {canCheckPart}");
+        Console.WriteLine($"Can Order Part          : {canOrderPart}");
+        Console.WriteLine($"Can Send Part           : {canSendPart}");
+        Console.WriteLine($"Can Archive             : {canArchive}");
+        Console.WriteLine($"Can Dispose             : {canDispose}");
+        Console.WriteLine($"Can Process Replacement : {canProcessReplacement}");
+        Console.WriteLine($"Can Send Replacement    : {canSendReplacement}");
+        Console.WriteLine("=====================================================");
+
+        // =========================================
+        // 12. RETURN DTO
+        // =========================================
+
         return dto with
         {
+            // Procurement
             CanApprove = canApprove,
             CanRevise = canRevise,
             CanReject = canReject,
             CanReceiveGoods = canReceiveGoods,
             CanResubmit = canResubmit,
 
+            // Maintenance
             CanAssignHandler = canAssignHandler,
             CanSendItem = canSendItem,
             CanReceiveItem = canReceiveItem,
+
+            // Handler
+            CanSubmitRepairResult = canSubmitRepairResult,
+            CanReceivePart = canReceivePart,
+
+            // Inventory
+            CanCheckPart = canCheckPart,
+            CanOrderPart = canOrderPart,
+            CanSendPart = canSendPart,
+
+            // IT Support
+            CanReviewRepairResult = canReviewRepairResult,
+
+            // Division Manager
+            CanArchive = canArchive,
+            CanDispose = canDispose,
+
+            // Inventory Replacement
+            CanProcessReplacement = canProcessReplacement,
+            CanSendReplacement = canSendReplacement,
+
             History = historyItems
         };
     }
+
+    // =========================================
+    // PROCUREMENT PENDING ACCESS
+    // =========================================
 
     private async Task<bool> CanViewProcurementPendingAsync(
         Ticket ticket,

@@ -1,5 +1,5 @@
-using ASMARA.API.Enums;
 
+using ASMARA.API.Enums;
 using ASMARA.API.Features.Procurement.Commands.CreateProcurementTicket;
 using ASMARA.API.Features.Procurement.Commands.ReceiveProcurementGoods;
 using ASMARA.API.Features.Procurement.Commands.ResubmitProcurementTicket;
@@ -20,7 +20,6 @@ public class ProcurementsController(ISender sender) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<TicketResponseDto>> Create(
-        // [FromBody] CreateTicketProcurementDto request,
         [FromBody] CreateProcurementTicketRequestDto request,
         CancellationToken ct)
     {
@@ -43,14 +42,28 @@ public class ProcurementsController(ISender sender) : ControllerBase
         [FromBody] TicketApprovalDto request,
         CancellationToken ct)
     {
-        if (!Enum.TryParse<TicketActionEnum>(request.Action, ignoreCase: true, out var action) ||
-            action is not (TicketActionEnum.Approve or TicketActionEnum.Reject or TicketActionEnum.Revise or TicketActionEnum.Cancel))
+        if (!Enum.TryParse<TicketActionEnum>(
+                request.Action,
+                ignoreCase: true,
+                out var action) ||
+            action is not (
+                TicketActionEnum.Approve or
+                TicketActionEnum.Reject or
+                TicketActionEnum.Revise or
+                TicketActionEnum.Cancel))
         {
-            return BadRequest(new { message = $"Aksi '{request.Action}' tidak valid. Aksi yang didukung: Approve, Reject, Revise, Cancel." });
+            return BadRequest(new
+            {
+                message = $"Aksi '{request.Action}' tidak valid. Aksi yang didukung: Approve, Reject, Revise, Cancel."
+            });
         }
 
         var result = await sender.Send(
-            new ExecuteTicketActionCommand(id, TicketTypeEnum.Procurement, action, request.Note),
+            new ExecuteTicketActionCommand(
+                id,
+                TicketTypeEnum.Procurement,
+                action,
+                request.Note),
             ct);
 
         return Ok(result);
@@ -77,8 +90,27 @@ public class ProcurementsController(ISender sender) : ControllerBase
         [FromForm] ReceiveGoodsRequestDto? request,
         CancellationToken ct)
     {
+        if (request is null)
+        {
+            return BadRequest(new
+            {
+                message = "Request data is required."
+            });
+        }
+
+        if (request.ProofFile is null)
+        {
+            return BadRequest(new
+            {
+                message = "Proof file is required."
+            });
+        }
+
         var result = await sender.Send(
-            new ReceiveProcurementGoodsCommand(id, request?.Note, request.ProofFile!),
+            new ReceiveProcurementGoodsCommand(
+                id,
+                request.Note,
+                request.ProofFile),
             ct);
 
         return Ok(result);

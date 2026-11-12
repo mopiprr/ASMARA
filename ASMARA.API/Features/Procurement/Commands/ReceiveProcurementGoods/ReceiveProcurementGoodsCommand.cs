@@ -47,10 +47,6 @@ public class ReceiveProcurementGoodsCommandHandler(
                 // 1. Eksekusi transisi alur tiket (Purchasing -> Completed)
                 var flowResult = await ticketFlow.ExecuteAsync(command.TicketId, TicketActionEnum.ReceiveGoods, command.Note, txCt);
 
-                // 2. Catat bukti pembelian di tiket
-                ticket.PurchaseProofFileName = Path.GetFileName(command.ProofFile.FileName);
-                ticket.PurchaseProofPath = proofPath;
-
                 // 3. Hitung nomor urut AssetTag terakhir untuk pembuatan aset non-consumable
                 var existingTags = await uow.Assets.QueryNoTracking()
                     .Where(a => a.AssetTag.StartsWith("AST-"))
@@ -74,7 +70,10 @@ public class ReceiveProcurementGoodsCommandHandler(
                     if (inventory is null)
                     {
                         inventory = await uow.ItemInventories.Query()
-                            .FirstOrDefaultAsync(i => i.ItemName.ToLower() == detail.ItemName.ToLower(), txCt);
+    .FirstOrDefaultAsync(
+        i => i.ItemCategoryId == detail.ItemCategoryId &&
+             i.ItemName.ToLower() == detail.ItemName.ToLower(),
+        txCt);
 
                         if (inventory is null)
                         {

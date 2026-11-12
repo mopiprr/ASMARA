@@ -1,29 +1,61 @@
-﻿using FluentValidation;
+﻿
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ASMARA.API.Common.ExceptionHandlers;
 
-public class ValidationExceptionHandler(IProblemDetailsService problemDetailsService) : IExceptionHandler
+public class ValidationExceptionHandler(
+    IProblemDetailsService problemDetailsService
+) : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken ct)
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken ct)
     {
         if (exception is not ValidationException validationException)
-            return false; 
+            return false;
 
-       const string prefix = "Request.";
+        const string prefix = "Request.";
+
         var errors = validationException.Errors
-            .GroupBy(e => e.PropertyName.StartsWith(prefix, StringComparison.Ordinal) ? e.PropertyName[prefix.Length..] : e.PropertyName)
-            .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+            .GroupBy(e =>
+                e.PropertyName.StartsWith(
+                    prefix,
+                    StringComparison.Ordinal)
+                    ? e.PropertyName[prefix.Length..]
+                    : e.PropertyName)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(e => e.ErrorMessage).ToArray());
+
+        // Tampilkan pesan jika ValidationException dibuat
+        // menggunakan string langsung, bukan ValidationFailure.
+        if (errors.Count == 0)
+        {
+            errors["general"] = new[]
+            {
+                validationException.Message
+            };
+        }
 
         var problem = new ValidationProblemDetails(errors)
         {
             Title = "One or more validation errors occurred.",
             Status = StatusCodes.Status400BadRequest
         };
-        problem.Extensions[ProblemDetailsWriter.ErrorCodeKey] = "VALIDATION_FAILED";
 
-        await ProblemDetailsWriter.WriteAsync(problemDetailsService, httpContext, problem, exception, ct);
+        problem.Extensions[ProblemDetailsWriter.ErrorCodeKey] =
+            "VALIDATION_FAILED";
+
+        await ProblemDetailsWriter.WriteAsync(
+            problemDetailsService,
+            httpContext,
+            problem,
+            exception,
+            ct);
+
         return true;
     }
 }
