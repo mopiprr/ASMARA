@@ -6,7 +6,7 @@ namespace ASMARA.API.Services.TicketFlow;
 
 public static class TaskAccess
 {
-    private static readonly HashSet<int> NoSelfApprovalLevels = [StepLevels.Finance];
+    private static readonly HashSet<int> NoSelfApprovalLevels = [StepLevels.Finance, StepLevels.Purchasing];
 
     public static bool CanActOn(Ticket ticket, int? stepLevel, Guid userId, IEnumerable<string> userRoleCodes)
     {
