@@ -10,14 +10,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
 
-public record ExecuteTicketActionCommand(Guid TicketId, TicketTypeEnum ExpectedType, TicketActionEnum Action, string? Note) 
+public record ExecuteTicketActionCommand(Guid TicketId, TicketTypeEnum ExpectedType, TicketActionEnum Action, string? Note)
     : IRequest<TransitionResult>;
- 
+
 public class ExecuteTicketActionCommandHandler(
     ITicketFlowService ticketFlow,
     IUnitOfWork uow,
     IMediator mediator,
-    ICurrentUser currentUser) 
+    ICurrentUser currentUser)
     : IRequestHandler<ExecuteTicketActionCommand, TransitionResult>
 {
     private static readonly HashSet<TicketActionEnum> SimpleActions =
@@ -87,10 +87,13 @@ public class ExecuteTicketActionCommandHandler(
             }
         }
 
-        var result = await ticketFlow.ExecuteAsync(command.TicketId, command.Action, command.Note, ct);
-
-        if (result.FromStep == StepCodes.InventorySendReplacement)
+        // Kirim pengganti wajib lewat send-replacement. Dicek SEBELUM transisi, supaya step tidak terlanjur pindah.
+        if (command.ExpectedType == TicketTypeEnum.Maintenance
+            && command.Action == TicketActionEnum.Send
+            && await uow.Tickets.GetCurrentStepAsync(ticket.Id, ct) == StepCodes.InventorySendReplacement)
             throw new BusinessRuleException("Use send-replacement to choose the replacement asset.");
+
+        var result = await ticketFlow.ExecuteAsync(command.TicketId, command.Action, command.Note, ct);
 
         // Jika tiket pengadaan ditolak setelah sebelumnya sempat disetujui (komitmen aktif): lepas komitmen
         if (command.ExpectedType == TicketTypeEnum.Procurement && command.Action == TicketActionEnum.Reject)

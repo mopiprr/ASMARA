@@ -5,6 +5,7 @@ using ASMARA.API.Features.Maintenance.Commands.OrderPart;
 using ASMARA.API.Features.Maintenance.Commands.ProcessReplacement;
 using ASMARA.API.Features.Maintenance.Commands.ReceiveItem;
 using ASMARA.API.Features.Maintenance.Commands.RejectMaintenanceTicket;
+using ASMARA.API.Features.Maintenance.Commands.SendPart;
 using ASMARA.API.Features.Maintenance.Commands.SendReplacement;
 using ASMARA.API.Features.Maintenance.Commands.SubmitRepairResult;
 using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
@@ -80,8 +81,12 @@ public class MaintenancesController(ISender sender) : ControllerBase
         => Ok(await sender.Send(new ProcessReplacementCommand(id, request), ct));
 
     [HttpPost("{id:guid}/order-part")]
-    public async Task<ActionResult<ChildTicketResult>> OrderPart(Guid id, [FromBody] OrderPartRequestDto request,CancellationToken ct)
+    public async Task<ActionResult<ChildTicketResult>> OrderPart(Guid id, [FromBody] OrderPartRequestDto request, CancellationToken ct)
         => Ok(await sender.Send(new OrderPartCommand(id, request), ct));
+
+    [HttpPost("{id:guid}/send-part")]
+    public async Task<ActionResult<TransitionResult>> SendPart(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
+        => Ok(await sender.Send(new SendPartCommand(id, request?.Note), ct));
 
     [HttpPost("{id:guid}/send-replacement")]
     public async Task<ActionResult<TransitionResult>> SendReplacement(Guid id, [FromBody] SendReplacementRequestDto request, CancellationToken ct)

@@ -1,6 +1,8 @@
 ﻿using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
+using ASMARA.API.Enums;
+using ASMARA.API.Features.Tickets.Queries;
 using ASMARA.API.Models.Ticket;
 using ASMARA.API.Services.TicketFlow;
 using MediatR;
@@ -24,14 +26,13 @@ public class GetTicketByIdQueryHandler(IUnitOfWork uow, ITicketHistoryService hi
 
         var currentStep = await uow.Tickets.GetCurrentStepAsync(query.Id, ct) ?? StepCodes.Created;
 
+        var stepLevel = await GetStepLevelAsync(ticket.TicketType, currentStep, ct);
+        var canAct = TaskAccess.CanActOn(ticket, stepLevel, employeeId, currentUser.Roles);
+
         var canView = ticket.EmployeeId == employeeId
                 || await uow.TicketWorkflowLogs.QueryNoTracking()
                     .AnyAsync(l => l.TicketId == query.Id && l.EmployeeId == employeeId, ct)
-                || TaskAccess.CanActOn(
-                    ticket,
-                    await GetStepLevelAsync(ticket.TicketType, currentStep, ct),
-                    employeeId,
-                    currentUser.Roles);
+                || canAct;
         if (!canView)
             throw new ForbiddenException($"You are not allowed to access it.");
 
@@ -88,7 +89,13 @@ public class GetTicketByIdQueryHandler(IUnitOfWork uow, ITicketHistoryService hi
 
         var historyItems = await history.GetHistoryAsync(query.Id, ct);
 
-        return dto with { CurrentStep = currentStep, History = historyItems, PurchaseProofFileName = ticket.PurchaseProofFileName };
+        var result = dto with { CurrentStep = currentStep, History = historyItems, PurchaseProofFileName = ticket.PurchaseProofFileName };
+
+        // Tombol aksi Maintenance (aturan sama dengan TicketFlow).
+        if (ticket.TicketType == (byte)TicketTypeEnum.Maintenance && ticket.ClosedAt == null)
+            result = MaintenanceActionFlags.Apply(result, canAct, currentStep);
+
+        return result;
     }
 
     private async Task<int?> GetStepLevelAsync(byte ticketType, string stepCode, CancellationToken ct)

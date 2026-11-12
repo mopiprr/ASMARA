@@ -1,10 +1,10 @@
-
 using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
 using ASMARA.API.Entities;
 using ASMARA.API.Enums;
 using ASMARA.API.Models.Ticket;
+using ASMARA.API.Features.Tickets.Queries;
 using ASMARA.API.Services.TicketFlow;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -177,10 +177,6 @@ public class GetPendingTicketByIdQueryHandler(
         var canReceiveGoods = false;
         var canResubmit = false;
 
-        var canAssignHandler = false;
-        var canSendItem = false;
-        var canReceiveItem = false;
-
         if (ticketType == TicketTypeEnum.Procurement)
         {
             if (currentStep is StepCodes.DepartmentApproval
@@ -238,50 +234,28 @@ public class GetPendingTicketByIdQueryHandler(
                     ct);
             }
         }
-        else if (ticketType == TicketTypeEnum.Maintenance)
-        {
-            // Hitung hak akses berdasarkan workflow Maintenance.
-            var canAct = TaskAccess.CanActOn(
-                ticket,
-                stepLevel,
-                employeeId,
-                roles);
-
-            var allowedActions = TransitionMap.AllowedActions(
-                ticketType,
-                currentStep);
-
-            bool Can(TicketActionEnum action)
-                => canAct && allowedActions.Contains(action);
-
-            // Department Manager.
-            canApprove = Can(TicketActionEnum.Approve);
-            canReject = Can(TicketActionEnum.Reject);
-
-            // IT Support.
-            canAssignHandler = Can(TicketActionEnum.AssignHandler);
-
-            // Maintenance workflow actions.
-            canSendItem = Can(TicketActionEnum.Send);
-            canReceiveItem = Can(TicketActionEnum.Receive);
-        }
 
         var historyItems = await history.GetHistoryAsync(query.Id, ct);
 
         // 7. Kembalikan DTO beserta hak akses user.
-        return dto with
+        var result = dto with
         {
             CanApprove = canApprove,
             CanRevise = canRevise,
             CanReject = canReject,
             CanReceiveGoods = canReceiveGoods,
             CanResubmit = canResubmit,
-
-            CanAssignHandler = canAssignHandler,
-            CanSendItem = canSendItem,
-            CanReceiveItem = canReceiveItem,
             History = historyItems
         };
+
+        // Tombol aksi Maintenance (aturan sama dengan TicketFlow).
+        if (ticketType == TicketTypeEnum.Maintenance)
+        {
+            var canAct = TaskAccess.CanActOn(ticket, stepLevel, employeeId, roles);
+            result = MaintenanceActionFlags.Apply(result, canAct, currentStep);
+        }
+
+        return result;
     }
 
     private async Task<bool> CanViewProcurementPendingAsync(

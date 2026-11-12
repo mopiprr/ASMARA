@@ -4,7 +4,7 @@ namespace ASMARA.API.Models.Ticket;
 
 public class TicketActionDto
 {
-    
+
 }
 
 public record CreateMaintenanceTicketRequestDto(
@@ -13,14 +13,14 @@ public record CreateMaintenanceTicketRequestDto(
     int AssetId,
     string ProblemDescription
     );
-    
+
 public record CreateProcurementTicketRequestDto(
     string Subject,
     string? Description,
     List<CreateProcurementItemRequest> Items,
     Guid? ParentTicketId = null
     );
-    
+
 public record ResubmitProcurementTicketRequestDto(
     string Subject,
     string? Description,
@@ -44,19 +44,27 @@ public record TicketApprovalDto(
     string Action,
     string? Note = null
     );
-        
+
 public record AssignTechnicianDto(
     Guid TechnicianId,
     string? InstructionNote = null
     );
-    
+
 
 public record PartCheckRequestDto(bool Available, string? Note = null);
 
-public record SubmitRepairResultRequestDto(RepairResultEnum Result, string? HandlerNote = null, string? PartRequirement = null);
+// Spare part terstruktur saat NeedPart (disimpan sebagai JSON di MaintenanceDetail.PartRequirement).
+public record MaintenancePartItemRequestDto(int? ItemId, int ItemCategoryId, string ItemName, int Quantity);
 
-public record ReplacementRequestDto(bool Available, int? ReplacementAssetId = null, string? Note = null, string? Subject = null,             
-    string? Description = null, List<CreateProcurementItemRequest>? Items = null);  
+// PartRequirement (teks) tetap didukung untuk request versi lama.
+public record SubmitRepairResultRequestDto(
+    RepairResultEnum Result,
+    string? HandlerNote = null,
+    string? PartRequirement = null,
+    List<MaintenancePartItemRequestDto>? Parts = null);
+
+public record ReplacementRequestDto(bool Available, int? ReplacementAssetId = null, string? Note = null, string? Subject = null,
+    string? Description = null, List<CreateProcurementItemRequest>? Items = null);
 
 public record OrderPartRequestDto(string Subject, string? Description, List<CreateProcurementItemRequest> Items, string? Note = null);
 
