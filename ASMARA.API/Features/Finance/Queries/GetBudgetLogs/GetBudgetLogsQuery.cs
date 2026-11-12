@@ -26,7 +26,7 @@ public class GetBudgetLogsQueryHandler(IUnitOfWork uow) : IRequestHandler<GetBud
 
         if (request.DepartmentId.HasValue)
         {
-            query = query.Where(l => l.DepartmentBudget.DepartmentId == request.DepartmentId.Value);
+            query = query.Where(l => l.DepartmentBudget!.DepartmentId == request.DepartmentId.Value);
         }
 
         if (request.TicketId.HasValue)
@@ -47,9 +47,9 @@ public class GetBudgetLogsQueryHandler(IUnitOfWork uow) : IRequestHandler<GetBud
                             l.Id,
                             l.LogNumber,
                             l.DepartmentBudgetId,
-                            l.DepartmentBudget.Department.DepartmentName,
+                            l.DepartmentBudget!.Department!.DepartmentName,
                             l.TicketId,
-                            l.Ticket != null ? l.Ticket.TicketNumber : null,
+                            l.Ticket != null ? l.Ticket!.TicketNumber : null,
                             l.RelatedDepartmentId,
                             relDept != null ? relDept.DepartmentName : null,
                             l.ChangeType,
