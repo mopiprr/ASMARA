@@ -19,12 +19,10 @@ public class GetBudgetLogsQueryHandler(IUnitOfWork uow) : IRequestHandler<GetBud
     public async Task<PagedResult<BudgetLogDto>> Handle(GetBudgetLogsQuery request, CancellationToken ct)
     {
         var query = uow.BudgetLogs.QueryNoTracking()
-                .Include(l => l.DepartmentBudget)
-                    .ThenInclude(db => db.Department)
-                .Include(l => l.Ticket)
-                .Include(l => l.RelatedDepartment)
-                .Include(l => l.CreatedByEmployee)
-                .AsQueryable();
+            .Include(l => l.DepartmentBudget)
+                .ThenInclude(db => db.Department)
+            .Include(l => l.Ticket)
+            .AsQueryable();
 
         if (request.DepartmentId.HasValue)
         {
@@ -36,28 +34,35 @@ public class GetBudgetLogsQueryHandler(IUnitOfWork uow) : IRequestHandler<GetBud
             query = query.Where(l => l.TicketId == request.TicketId.Value);
         }
 
-        var projected = query
-            .OrderByDescending(l => l.CreatedAt)
-            .Select(l => new BudgetLogDto(
-                l.Id,
-                l.LogNumber,
-                l.DepartmentBudgetId,
-                l.DepartmentBudget.Department.DepartmentName,
-                l.TicketId,
-                l.Ticket != null ? l.Ticket.TicketNumber : null,
-                l.RelatedDepartmentId,
-                l.RelatedDepartment != null ? l.RelatedDepartment.DepartmentName : null,
-                l.ChangeType,
-                ((BudgetChangeTypeEnum)l.ChangeType).ToString(),
-                l.Amount,
-                l.PreviousAllocated,
-                l.NewAllocated,
-                l.PreviousRemaining,
-                l.NewRemaining,
-                l.Description,
-                l.CreatedByEmployee.FullName,
-                l.CreatedAt
-            ));
+        var employees = uow.Employees.QueryNoTracking();
+        var departments = uow.Departments.QueryNoTracking();
+
+        var projected = from l in query
+                        join emp in employees on l.CreatedByEmployeeId equals emp.Id into empGroup
+                        from emp in empGroup.DefaultIfEmpty()
+                        join relDept in departments on l.RelatedDepartmentId equals relDept.Id into deptGroup
+                        from relDept in deptGroup.DefaultIfEmpty()
+                        orderby l.CreatedAt descending
+                        select new BudgetLogDto(
+                            l.Id,
+                            l.LogNumber,
+                            l.DepartmentBudgetId,
+                            l.DepartmentBudget.Department.DepartmentName,
+                            l.TicketId,
+                            l.Ticket != null ? l.Ticket.TicketNumber : null,
+                            l.RelatedDepartmentId,
+                            relDept != null ? relDept.DepartmentName : null,
+                            l.ChangeType,
+                            ((BudgetChangeTypeEnum)l.ChangeType).ToString(),
+                            l.Amount,
+                            l.PreviousAllocated,
+                            l.NewAllocated,
+                            l.PreviousRemaining,
+                            l.NewRemaining,
+                            l.Description,
+                            emp != null ? emp.FullName : "System",
+                            l.CreatedAt
+                        );
 
         return await projected.ToPagedResultAsync(request.Page, request.PageSize, ct: ct);
     }

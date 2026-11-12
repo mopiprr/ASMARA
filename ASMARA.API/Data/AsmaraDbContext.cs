@@ -1,4 +1,4 @@
-﻿using ASMARA.API.Entities;
+using ASMARA.API.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Data;
@@ -397,14 +397,7 @@ public partial class AsmaraDbContext : DbContext
             .HasForeignKey(d => d.TicketId)
             .HasConstraintName("FK_BudgetLog_Ticket");
 
-            entity.HasOne(d => d.RelatedDepartment).WithMany()
-            .HasForeignKey(d => d.RelatedDepartmentId)
-            .HasConstraintName("FK_BudgetLog_RelatedDepartment");
-
-            entity.HasOne(d => d.CreatedByEmployee).WithMany(p => p.BudgetLogs)
-                .HasForeignKey(d => d.CreatedByEmployeeId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BudgetLog_Employee");
+            entity.HasIndex(e => e.CreatedByEmployeeId, "IX_BudgetLog_CreatedByEmployeeId");
         });
 
         OnModelCreatingPartial(modelBuilder);

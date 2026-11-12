@@ -19,7 +19,5 @@
 
         public virtual DepartmentBudget DepartmentBudget { get; set; } = null!;
         public virtual Ticket? Ticket { get; set; }
-        public virtual Department? RelatedDepartment { get; set; }
-        public virtual Employee CreatedByEmployee { get; set; } = null!;
     }
 }

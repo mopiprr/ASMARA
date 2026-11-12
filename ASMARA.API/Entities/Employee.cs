@@ -33,6 +33,4 @@ public partial class Employee
     public virtual Employee? Manager { get; set; }
 
     public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
-
-    public ICollection<BudgetLog> BudgetLogs { get; set; } = new List<BudgetLog>();
 }
