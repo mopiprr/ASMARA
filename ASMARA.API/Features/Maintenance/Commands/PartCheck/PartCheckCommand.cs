@@ -11,22 +11,22 @@ using ASMARA.API.Services.TicketFlow;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace ASMARA.API.Features.Maintenance.Commands.SendPart;
+namespace ASMARA.API.Features.Maintenance.Commands.PartCheck;
 
-public record SendPartCommand(
+public record PartCheckCommand(
     Guid TicketId,
     string? Note
 ) : IRequest<TransitionResult>;
 
-public class SendPartCommandHandler(
+public class PartCheckCommandHandler(
     IUnitOfWork uow,
     ITicketFlowService ticketFlow,
     ICurrentUser currentUser,
     IMediator mediator
-) : IRequestHandler<SendPartCommand, TransitionResult>
+) : IRequestHandler<PartCheckCommand, TransitionResult>
 {
     public async Task<TransitionResult> Handle(
-        SendPartCommand command,
+        PartCheckCommand command,
         CancellationToken ct)
     {
         var (ticket, result) = await uow.ExecuteInTransactionAsync(async txCt =>
@@ -210,9 +210,9 @@ public class SendPartCommandHandler(
     }
 }
 
-public class SendPartCommandValidator : AbstractValidator<SendPartCommand>
+public class PartCheckCommandValidator : AbstractValidator<PartCheckCommand>
 {
-    public SendPartCommandValidator()
+    public PartCheckCommandValidator()
     {
         RuleFor(x => x.TicketId)
             .NotEmpty();

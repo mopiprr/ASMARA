@@ -17,5 +17,12 @@ public class GetInventoryItemsValidator : AbstractValidator<GetInventoryItemsQue
             RuleFor(x => x.Search)
                 .MaximumLength(100);
         });
+
+        When(x => x.TrackingType.HasValue, () =>
+        {
+            RuleFor(x => x.TrackingType!.Value)
+                .Must(v => v == 1 || v == 2)
+                .WithMessage("TrackingType must be 1 (Consumable) or 2 (NonConsumable).");
+        });
     }
 }

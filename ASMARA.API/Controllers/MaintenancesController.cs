@@ -2,10 +2,10 @@ using ASMARA.API.Enums;
 using ASMARA.API.Features.Maintenance.Commands.AssignHandlerMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.CreateMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.OrderPart;
+using ASMARA.API.Features.Maintenance.Commands.PartCheck;
 using ASMARA.API.Features.Maintenance.Commands.ProcessReplacement;
 using ASMARA.API.Features.Maintenance.Commands.ReceiveItem;
 using ASMARA.API.Features.Maintenance.Commands.RejectMaintenanceTicket;
-using ASMARA.API.Features.Maintenance.Commands.SendPart;
 using ASMARA.API.Features.Maintenance.Commands.SendReplacement;
 using ASMARA.API.Features.Maintenance.Commands.SubmitRepairResult;
 using ASMARA.API.Features.Tickets.Commands.ExecuteTicketAction;
@@ -74,7 +74,14 @@ public class MaintenancesController(ISender sender) : ControllerBase
 
     [HttpPost("{id:guid}/part-check")]
     public async Task<ActionResult<TransitionResult>> PartCheck(Guid id, [FromBody] PartCheckRequestDto request, CancellationToken ct)
-        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, request.Available ? TicketActionEnum.PartAvailable : TicketActionEnum.PartUnavailable, request.Note), ct));
+    {
+        if (request.Available)
+        {
+            return Ok(await sender.Send(new PartCheckCommand(id, request.Note), ct));
+        }
+
+        return Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.PartUnavailable, request.Note), ct));
+    }
 
     [HttpPost("{id:guid}/replacement")]
     public async Task<ActionResult<TransitionResult>> Replacement(Guid id, [FromBody] ReplacementRequestDto request, CancellationToken ct)
@@ -83,10 +90,6 @@ public class MaintenancesController(ISender sender) : ControllerBase
     [HttpPost("{id:guid}/order-part")]
     public async Task<ActionResult<ChildTicketResult>> OrderPart(Guid id, [FromBody] OrderPartRequestDto request, CancellationToken ct)
         => Ok(await sender.Send(new OrderPartCommand(id, request), ct));
-
-    [HttpPost("{id:guid}/send-part")]
-    public async Task<ActionResult<TransitionResult>> SendPart(Guid id, [FromBody] TicketNoteRequestDto? request, CancellationToken ct)
-        => Ok(await sender.Send(new SendPartCommand(id, request?.Note), ct));
 
     [HttpPost("{id:guid}/send-replacement")]
     public async Task<ActionResult<TransitionResult>> SendReplacement(Guid id, [FromBody] SendReplacementRequestDto request, CancellationToken ct)

@@ -6,6 +6,7 @@ using ASMARA.API.Features.Catalog.Commands.UpdateInventoryItem;
 using ASMARA.API.Features.Catalog.Queries.GetInventoryItemAssets;
 using ASMARA.API.Features.Catalog.Queries.GetInventoryItems;
 using ASMARA.API.Features.Catalog.Queries.GetItemCategories;
+using ASMARA.API.Features.Catalog.Queries.GetSpareParts;
 using ASMARA.API.Models.Inventory;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -20,28 +21,45 @@ public class InventoryController(IMediator mediator) : ControllerBase
 {
     /// <summary>
     /// Mengambil seluruh data barang inventaris (ItemInventory).
-    /// Mendukung filter kategori (?categoryId=1), pencarian teks (?search=dell), dan status aktif (?onlyActive=false).
+    /// Mendukung filter kategori (?categoryId=1), jenis tracking (?trackingType=1), pencarian teks (?search=dell), dan status aktif (?onlyActive=false).
     /// </summary>
     [HttpGet("items")]
     public async Task<ActionResult<List<ItemInventoryResponseDto>>> GetItems(
         [FromQuery] int? categoryId,
         [FromQuery] string? search,
         [FromQuery] bool onlyActive = false,
+        [FromQuery] byte? trackingType = null,
         CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetInventoryItemsQuery(categoryId, search, onlyActive), ct);
+        var result = await mediator.Send(new GetInventoryItemsQuery(categoryId, search, onlyActive, trackingType), ct);
         return Ok(result);
     }
 
     /// <summary>
     /// Mengambil seluruh kategori barang (ItemCategory) untuk dropdown input barang manual.
+    /// Mendukung filter trackingType (1 = Consumable / Spare Part, 2 = Non-Consumable / Aset).
     /// </summary>
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories(
         [FromQuery] bool onlyActive = true,
+        [FromQuery] byte? trackingType = null,
         CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetItemCategoriesQuery(onlyActive), ct);
+        var result = await mediator.Send(new GetItemCategoriesQuery(onlyActive, trackingType), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Mengambil seluruh suku cadang / spare part (barang Consumable) aktif beserta ketersediaan stoknya di gudang.
+    /// Mempermudah teknisi pada flow maintenance (NeedPart) untuk mengecek ketersediaan barang di gudang.
+    /// </summary>
+    [HttpGet("spare-parts")]
+    public async Task<ActionResult<List<SparePartItemDto>>> GetSpareParts(
+        [FromQuery] string? search,
+        [FromQuery] bool onlyInStock = false,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetSparePartsQuery(search, onlyInStock), ct);
         return Ok(result);
     }
 
