@@ -56,3 +56,13 @@ public record DeleteInventoryUnitsResultDto(
     string Message
 );
 
+public record SparePartItemDto(
+    int Id,
+    int ItemCategoryId,
+    string CategoryName,
+    string ItemCode,
+    string ItemName,
+    int Stock,
+    bool IsActive
+);
+

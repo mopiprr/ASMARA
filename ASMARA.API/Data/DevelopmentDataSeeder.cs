@@ -23,11 +23,14 @@ public static class DevelopmentDataSeeder
         // 1. Seed ItemCategory.
         var categoryDefinitions = new[]
         {
-            new { Code = "DEV-CAT-001", Name = "Computer & Laptop" },
-            new { Code = "DEV-CAT-002", Name = "Monitor" },
-            new { Code = "DEV-CAT-003", Name = "Printer" },
-            new { Code = "DEV-CAT-004", Name = "Network Equipment" },
-            new { Code = "DEV-CAT-005", Name = "Presentation Equipment" }
+            new { Code = "DEV-CAT-001", Name = "Computer & Laptop", TrackingType = TrackingTypeEnum.NonConsumable },
+            new { Code = "DEV-CAT-002", Name = "Monitor", TrackingType = TrackingTypeEnum.NonConsumable },
+            new { Code = "DEV-CAT-003", Name = "Printer", TrackingType = TrackingTypeEnum.NonConsumable },
+            new { Code = "DEV-CAT-004", Name = "Network Equipment", TrackingType = TrackingTypeEnum.NonConsumable },
+            new { Code = "DEV-CAT-005", Name = "Presentation Equipment", TrackingType = TrackingTypeEnum.NonConsumable },
+            new { Code = "DEV-CAT-006", Name = "RAM & Memory", TrackingType = TrackingTypeEnum.Consumable },
+            new { Code = "DEV-CAT-007", Name = "Storage & SSD", TrackingType = TrackingTypeEnum.Consumable },
+            new { Code = "DEV-CAT-008", Name = "Cables & Accessories", TrackingType = TrackingTypeEnum.Consumable }
         };
 
         foreach (var definition in categoryDefinitions)
@@ -41,7 +44,7 @@ public static class DevelopmentDataSeeder
                 {
                     CategoryCode = definition.Code,
                     CategoryName = definition.Name,
-                    TrackingType = (byte)TrackingTypeEnum.NonConsumable,
+                    TrackingType = (byte)definition.TrackingType,
                     IsActive = true
                 });
             }
@@ -63,31 +66,64 @@ public static class DevelopmentDataSeeder
             {
                 Code = "DEV-ITEM-001",
                 Name = "Lenovo ThinkPad Laptop",
-                CategoryCode = "DEV-CAT-001"
+                CategoryCode = "DEV-CAT-001",
+                Qty = (int?)null
             },
             new
             {
                 Code = "DEV-ITEM-002",
                 Name = "Dell Monitor 24 Inch",
-                CategoryCode = "DEV-CAT-002"
+                CategoryCode = "DEV-CAT-002",
+                Qty = (int?)null
             },
             new
             {
                 Code = "DEV-ITEM-003",
                 Name = "HP LaserJet Printer",
-                CategoryCode = "DEV-CAT-003"
+                CategoryCode = "DEV-CAT-003",
+                Qty = (int?)null
             },
             new
             {
                 Code = "DEV-ITEM-004",
                 Name = "TP-Link Network Router",
-                CategoryCode = "DEV-CAT-004"
+                CategoryCode = "DEV-CAT-004",
+                Qty = (int?)null
             },
             new
             {
                 Code = "DEV-ITEM-005",
                 Name = "Epson Projector",
-                CategoryCode = "DEV-CAT-005"
+                CategoryCode = "DEV-CAT-005",
+                Qty = (int?)null
+            },
+            new
+            {
+                Code = "DEV-ITEM-006",
+                Name = "Kingston 8GB DDR4 SODIMM RAM",
+                CategoryCode = "DEV-CAT-006",
+                Qty = (int?)10
+            },
+            new
+            {
+                Code = "DEV-ITEM-007",
+                Name = "Samsung 500GB SSD EVO",
+                CategoryCode = "DEV-CAT-007",
+                Qty = (int?)5
+            },
+            new
+            {
+                Code = "DEV-ITEM-008",
+                Name = "Cat6 RJ45 LAN Cable 3M",
+                CategoryCode = "DEV-CAT-008",
+                Qty = (int?)20
+            },
+            new
+            {
+                Code = "DEV-ITEM-009",
+                Name = "Arctic MX-4 Thermal Paste",
+                CategoryCode = "DEV-CAT-008",
+                Qty = (int?)0
             }
         };
 
@@ -104,7 +140,7 @@ public static class DevelopmentDataSeeder
                     ItemCode = definition.Code,
                     ItemName = definition.Name,
                     IsActive = true,
-                    Qty = null
+                    Qty = definition.Qty
                 });
             }
         }

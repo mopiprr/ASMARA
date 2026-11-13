@@ -2,6 +2,7 @@ using ASMARA.API.Enums;
 using ASMARA.API.Features.Maintenance.Commands.AssignHandlerMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.CreateMaintenanceTicket;
 using ASMARA.API.Features.Maintenance.Commands.OrderPart;
+using ASMARA.API.Features.Maintenance.Commands.PartCheck;
 using ASMARA.API.Features.Maintenance.Commands.ProcessReplacement;
 using ASMARA.API.Features.Maintenance.Commands.ReceiveItem;
 using ASMARA.API.Features.Maintenance.Commands.RejectMaintenanceTicket;
@@ -73,14 +74,21 @@ public class MaintenancesController(ISender sender) : ControllerBase
 
     [HttpPost("{id:guid}/part-check")]
     public async Task<ActionResult<TransitionResult>> PartCheck(Guid id, [FromBody] PartCheckRequestDto request, CancellationToken ct)
-        => Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, request.Available ? TicketActionEnum.PartAvailable : TicketActionEnum.PartUnavailable, request.Note), ct));
+    {
+        if (request.Available)
+        {
+            return Ok(await sender.Send(new PartCheckCommand(id, request.Note), ct));
+        }
+
+        return Ok(await sender.Send(new ExecuteTicketActionCommand(id, TicketTypeEnum.Maintenance, TicketActionEnum.PartUnavailable, request.Note), ct));
+    }
 
     [HttpPost("{id:guid}/replacement")]
     public async Task<ActionResult<TransitionResult>> Replacement(Guid id, [FromBody] ReplacementRequestDto request, CancellationToken ct)
         => Ok(await sender.Send(new ProcessReplacementCommand(id, request), ct));
 
     [HttpPost("{id:guid}/order-part")]
-    public async Task<ActionResult<ChildTicketResult>> OrderPart(Guid id, [FromBody] OrderPartRequestDto request,CancellationToken ct)
+    public async Task<ActionResult<ChildTicketResult>> OrderPart(Guid id, [FromBody] OrderPartRequestDto request, CancellationToken ct)
         => Ok(await sender.Send(new OrderPartCommand(id, request), ct));
 
     [HttpPost("{id:guid}/send-replacement")]

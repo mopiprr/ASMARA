@@ -14,7 +14,7 @@ public class ResubmitProcurementTicketValidator : AbstractValidator<ResubmitProc
 
         RuleFor(x => x.Request.Subject)
             .NotEmpty().WithMessage("Subjek pengajuan wajib diisi.")
-            .MaximumLength(50).WithMessage("Subjek pengajuan maksimal 100 karakter.");
+            .MaximumLength(50).WithMessage("Subjek pengajuan maksimal 50 karakter.");
 
         RuleFor(x => x.Request.Description)
             .MaximumLength(500).WithMessage("Deskripsi pengajuan maksimal 500 karakter.");

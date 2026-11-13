@@ -30,7 +30,10 @@ public static class ServiceCollectionExtensions
 
         #region Services
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.AddSingleton<IEmailQueue, EmailQueue>();
+        services.AddTransient<ISmtpEmailSender, SmtpEmailSender>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddHostedService<EmailBackgroundWorker>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         #endregion
 

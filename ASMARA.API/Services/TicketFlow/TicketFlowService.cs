@@ -7,8 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ASMARA.API.Services.TicketFlow;
 
-public class TicketFlowService
-    (ITicketRepository tickets, IWorkflowStepRepository workflowSteps, ITicketWorkflowLogRepository logs,
+public class TicketFlowService(ITicketRepository tickets, IWorkflowStepRepository workflowSteps, ITicketWorkflowLogRepository logs,
     IApproverResolver approverResolver, ICurrentUser currentUser)
     : ITicketFlowService
 {
@@ -83,14 +82,9 @@ public class TicketFlowService
         if (checkAccess && !TaskAccess.CanActOn(ticket, level, currentUser.EmployeeId, currentUser.Roles))
             throw new ForbiddenException("You are not allowed to act on this ticket.");
 
-        if (action == TicketActionEnum.Create)
-        {
-            var requiredHops = type == TicketTypeEnum.Maintenance
-                ? StepLevels.DivisionManager
-                : StepLevels.DepartmentManager;
-
-            await approverResolver.ResolveAsync(ticket, requiredHops, ct);
-        }
+        // Maintenance butuh Division Manager untuk step DIVISION_MANAGER_REVIEW -> cek sejak awal.
+        if (action == TicketActionEnum.Create && type == TicketTypeEnum.Maintenance)
+            await approverResolver.ResolveAsync(ticket, StepLevels.DivisionManager, ct);
 
         var toLevel = await GetStepLevelAsync(ticket.TicketType, toStep, ct);
         var isTerminal = TransitionMap.IsTerminal(type, toStep);
@@ -99,6 +93,37 @@ public class TicketFlowService
             : await approverResolver.ResolveAsync(ticket, toLevel, ct);
 
         var now = DateTime.UtcNow;
+        var resultFromStep = fromStep;
+        var cleanNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+
+        if (!isTerminal
+            && toLevel == StepLevels.DepartmentManager
+            && nextTaskEmployeeId is null
+            && TransitionMap.TryGetNextStep(type, toStep, TicketActionEnum.Approve, out var stepAfterApproval))
+        {
+            logs.Add(new TicketWorkflowLog
+            {
+                TicketId = ticket.Id,
+                FromStep = fromStep,
+                ToStep = toStep,
+                EmployeeId = currentUser.EmployeeId,
+                EmployeeName = currentUser.FullName,
+                Note = cleanNote,
+                CreatedAt = now
+            });
+
+            fromStep = toStep;
+            toStep = stepAfterApproval;
+            toLevel = await GetStepLevelAsync(ticket.TicketType, toStep, ct);
+            isTerminal = TransitionMap.IsTerminal(type, toStep);
+            nextTaskEmployeeId = isTerminal
+                ? null
+                : await approverResolver.ResolveAsync(ticket, toLevel, ct);
+
+            cleanNote = "Auto-approved: requester has no higher approver.";
+            now = now.AddMilliseconds(1); // urutan log tetap benar
+        }
+
         logs.Add(new TicketWorkflowLog
         {
             TicketId = ticket.Id,
@@ -106,7 +131,7 @@ public class TicketFlowService
             ToStep = toStep,
             EmployeeId = currentUser.EmployeeId,
             EmployeeName = currentUser.FullName,
-            Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+            Note = cleanNote,
             CreatedAt = now
         });
 
@@ -115,7 +140,7 @@ public class TicketFlowService
         if (isTerminal)
             ticket.ClosedAt = now;
 
-        var result = new TransitionResult(ticket.Id, fromStep, toStep, isTerminal, nextTaskEmployeeId, toLevel);
+        var result = new TransitionResult(ticket.Id, resultFromStep, toStep, isTerminal, nextTaskEmployeeId, toLevel);
         if (isTerminal && ticket.ParentTicketId is Guid parentId)
         {
             var parentAction = toStep == StepCodes.Completed

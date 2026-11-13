@@ -9,7 +9,8 @@ namespace ASMARA.API.Features.Catalog.Queries.GetInventoryItems;
 public record GetInventoryItemsQuery(
     int? CategoryId = null,
     string? Search = null,
-    bool OnlyActive = false
+    bool OnlyActive = false,
+    byte? TrackingType = null
 ) : IRequest<List<ItemInventoryResponseDto>>;
 
 public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
@@ -30,6 +31,11 @@ public class GetInventoryItemsQueryHandler(IUnitOfWork uow)
         if (request.CategoryId.HasValue)
         {
             query = query.Where(i => i.ItemCategoryId == request.CategoryId.Value);
+        }
+
+        if (request.TrackingType.HasValue)
+        {
+            query = query.Where(i => i.ItemCategory.TrackingType == request.TrackingType.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Search))

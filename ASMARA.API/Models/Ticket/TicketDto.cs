@@ -2,9 +2,9 @@ namespace ASMARA.API.Models.Ticket;
 
 public class TicketDto
 {
-    
+
 }
-    
+
 public record TicketResponseDto(
     Guid Id,
     Guid? ParentTicketId,
@@ -33,16 +33,24 @@ public record TicketResponseDto(
     bool CanSendItem = false,
     bool CanReceiveItem = false,
     string? PurchaseProofFileName = null,
-    string? RequesterDepartment = null
+    string? RequesterDepartment = null,
+    bool CanSubmitRepairResult = false,
+    bool CanCheckPart = false,
+    bool CanReceivePart = false,
+    bool CanOrderPart = false,
+    bool CanArchive = false,
+    bool CanDispose = false,
+    bool CanProcessReplacement = false,
+    bool CanSendReplacement = false
 );
 
 public record TicketWorkflowHistoryDto(
-    string? Action,   
-    string ActionLabel, 
+    string? Action,
+    string ActionLabel,
     string FromStep,
     string ToStep,
     Guid EmployeeId,
-    string? EmployeeName, 
+    string? EmployeeName,
     string? Note,
     DateTime CreatedAt
 );
