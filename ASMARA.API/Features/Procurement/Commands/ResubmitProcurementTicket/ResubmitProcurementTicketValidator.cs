@@ -7,38 +7,38 @@ public class ResubmitProcurementTicketValidator : AbstractValidator<ResubmitProc
     public ResubmitProcurementTicketValidator()
     {
         RuleFor(x => x.TicketId)
-            .NotEmpty().WithMessage("ID tiket pengadaan wajib diisi.");
+            .NotEmpty();
 
         RuleFor(x => x.Request)
-            .NotNull().WithMessage("Request revisi tidak boleh kosong.");
+            .NotNull();
 
         RuleFor(x => x.Request.Subject)
-            .NotEmpty().WithMessage("Subjek pengajuan wajib diisi.")
-            .MaximumLength(50).WithMessage("Subjek pengajuan maksimal 50 karakter.");
+            .NotEmpty()
+            .MaximumLength(50);
 
         RuleFor(x => x.Request.Description)
-            .MaximumLength(500).WithMessage("Deskripsi pengajuan maksimal 500 karakter.");
+            .MaximumLength(500);
 
         RuleFor(x => x.Request.Items)
-            .NotEmpty().WithMessage("Daftar barang pengadaan tidak boleh kosong.")
-            .Must(items => items != null && items.Count > 0).WithMessage("Minimal harus ada 1 barang dalam pengajuan pengadaan.");
+            .NotEmpty()
+            .Must(items => items != null && items.Count > 0);
 
         RuleForEach(x => x.Request.Items)
             .ChildRules(item =>
             {
                 item.RuleFor(i => i.Quantity)
-                    .GreaterThan(0).WithMessage("Jumlah barang harus lebih besar dari 0.");
+                    .GreaterThan(0);
 
                 item.RuleFor(i => i.Price)
-                    .GreaterThan(0).WithMessage("Harga estimasi barang tidak boleh negatif.");
+                    .GreaterThan(0);
 
                 item.When(i => !i.ItemId.HasValue, () =>
                 {
                     item.RuleFor(i => i.ItemName)
-                        .NotEmpty().WithMessage("Nama barang wajib diisi untuk barang baru.");
+                        .NotEmpty();
 
                     item.RuleFor(i => i.ItemCategoryId)
-                        .GreaterThan(0).WithMessage("Kategori barang wajib dipilih untuk barang baru.");
+                        .GreaterThan(0);
                 });
             });
     }
