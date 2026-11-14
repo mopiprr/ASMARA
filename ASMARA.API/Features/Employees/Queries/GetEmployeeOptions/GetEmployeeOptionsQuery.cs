@@ -4,7 +4,7 @@ using ASMARA.API.Models.Organization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace ASMARA.API.Features.Employees.Queries.GetManagerOptions;
+namespace ASMARA.API.Features.Employees.Queries.GetEmployeeOptions;
 
 public record GetEmployeeOptionsQuery : IRequest<IReadOnlyList<EmployeeOptionDto>>;
 

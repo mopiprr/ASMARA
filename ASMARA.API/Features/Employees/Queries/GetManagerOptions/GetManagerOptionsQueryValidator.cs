@@ -6,6 +6,7 @@ public class GetManagerOptionsQueryValidator : AbstractValidator<GetManagerOptio
 {
     public GetManagerOptionsQueryValidator()
     {
-        RuleFor(x => x.DepartmentId).NotEmpty();
+        RuleFor(x => x.DepartmentId)
+            .NotEmpty().WithMessage("Please select a department first.");
     }
 }

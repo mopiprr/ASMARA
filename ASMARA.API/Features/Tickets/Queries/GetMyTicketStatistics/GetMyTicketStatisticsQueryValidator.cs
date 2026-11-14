@@ -6,6 +6,8 @@ public class GetMyTicketStatisticsQueryValidator : AbstractValidator<GetMyTicket
 {
     public GetMyTicketStatisticsQueryValidator()
     {
-        RuleFor(x => x.Type).IsInEnum().When(x => x.Type.HasValue);
+        RuleFor(x => x.Type)
+            .IsInEnum().WithMessage("Invalid ticket type. Use 1 (Maintenance) or 2 (Procurement).")
+            .When(x => x.Type.HasValue);
     }
 }
