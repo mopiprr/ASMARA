@@ -4,7 +4,7 @@ public class MaintenanceDetailDto
 {
     
 }
-    
+
 public record MaintenanceDetailResponseDto(
     Guid TicketId,
     int AssetId,
@@ -15,5 +15,8 @@ public record MaintenanceDetailResponseDto(
     string? PartRequirement,
     int? ReplacementAssetId,
     string? ReplacementAssetTag,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? AssetItemName,
+    string? AssetCategoryName,
+    string? ReplacementAssetItemName
     );
