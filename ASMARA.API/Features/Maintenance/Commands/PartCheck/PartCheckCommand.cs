@@ -209,15 +209,3 @@ public class PartCheckCommandHandler(
         return result;
     }
 }
-
-public class PartCheckCommandValidator : AbstractValidator<PartCheckCommand>
-{
-    public PartCheckCommandValidator()
-    {
-        RuleFor(x => x.TicketId)
-            .NotEmpty();
-
-        RuleFor(x => x.Note)
-            .MaximumLength(200);
-    }
-}

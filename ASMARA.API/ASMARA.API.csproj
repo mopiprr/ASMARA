@@ -31,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Employees\Queries\GetEmployeeOptions\" />
     <Folder Include="Middlewares\" />
     <Folder Include="Services\Email\" />
   </ItemGroup>

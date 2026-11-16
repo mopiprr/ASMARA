@@ -1,8 +1,8 @@
 ﻿using ASMARA.API.Common.Paging;
 using ASMARA.API.Common.Security;
-using ASMARA.API.Entities;
 using ASMARA.API.Features.Employees.Commands.CreateEmployee;
 using ASMARA.API.Features.Employees.Queries.GetEmployeeById;
+using ASMARA.API.Features.Employees.Queries.GetEmployeeOptions;
 using ASMARA.API.Features.Employees.Queries.GetEmployees;
 using ASMARA.API.Features.Employees.Queries.GetMaintenanceHandlers;
 using ASMARA.API.Features.Employees.Queries.GetManagerOptions;

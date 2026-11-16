@@ -66,7 +66,12 @@ public class GetTicketByIdQueryHandler(IUnitOfWork uow, ITicketHistoryService hi
                    t.MaintenanceDetail.ReplacementAsset != null
                        ? t.MaintenanceDetail.ReplacementAsset.AssetTag
                        : null,
-                   t.MaintenanceDetail.CreatedAt),
+                   t.MaintenanceDetail.CreatedAt,
+                   t.MaintenanceDetail.Asset.Item.ItemName,
+                   t.MaintenanceDetail.Asset.Item.ItemCategory.CategoryName,
+                   t.MaintenanceDetail.ReplacementAsset != null
+                       ? t.MaintenanceDetail.ReplacementAsset.Item.ItemName
+                       : null),
                t.ProcurementDetails
                    .Select(p => new ProcurementDetailResponseDto(
                        p.TicketId,

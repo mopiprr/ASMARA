@@ -9,13 +9,13 @@ public class GetInventoryItemsValidator : AbstractValidator<GetInventoryItemsQue
         When(x => x.CategoryId.HasValue, () =>
         {
             RuleFor(x => x.CategoryId!.Value)
-                .GreaterThan(0);
+                .GreaterThan(0).WithMessage("Invalid category filter.");
         });
 
         When(x => !string.IsNullOrWhiteSpace(x.Search), () =>
         {
             RuleFor(x => x.Search)
-                .MaximumLength(100);
+                .MaximumLength(100).WithMessage("Search keyword must not exceed 100 characters.");
         });
 
         When(x => x.TrackingType.HasValue, () =>

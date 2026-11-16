@@ -7,17 +7,13 @@ public class DeleteInventoryUnitsCommandValidator : AbstractValidator<DeleteInve
     public DeleteInventoryUnitsCommandValidator()
     {
         RuleFor(x => x.ItemId)
-            .GreaterThan(0)
-            .WithMessage("Item ID must be greater than 0.");
+            .GreaterThan(0).WithMessage("Invalid item ID.");
 
         RuleFor(x => x.Dto.Reason)
-            .NotEmpty()
-            .WithMessage("Reason for deletion/reduction is required.")
-            .MaximumLength(150)
-            .WithMessage("Reason cannot exceed 150 characters.");
+            .NotEmpty().WithMessage("Please enter the reason for removing these units.")
+            .MaximumLength(150).WithMessage("Reason must not exceed 150 characters.");
 
         RuleFor(x => x.Dto.Notes)
-            .MaximumLength(500)
-            .WithMessage("Notes cannot exceed 500 characters.");
+            .MaximumLength(500).WithMessage("Notes must not exceed 500 characters.");
     }
 }

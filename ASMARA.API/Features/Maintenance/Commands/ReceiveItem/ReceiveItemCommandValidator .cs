@@ -6,7 +6,10 @@ public class ReceiveItemCommandValidator : AbstractValidator<ReceiveItemCommand>
 {
     public ReceiveItemCommandValidator()
     {
-        RuleFor(x => x.TicketId).NotEmpty();
-        RuleFor(x => x.Note).MaximumLength(200);
+        RuleFor(x => x.TicketId)
+            .NotEmpty().WithMessage("Ticket ID is required.");
+
+        RuleFor(x => x.Note)
+            .MaximumLength(200).WithMessage("Note must not exceed 200 characters.");
     }
 }

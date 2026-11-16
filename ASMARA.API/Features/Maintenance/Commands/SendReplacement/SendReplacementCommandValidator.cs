@@ -6,9 +6,16 @@ public class SendReplacementCommandValidator : AbstractValidator<SendReplacement
 {
     public SendReplacementCommandValidator()
     {
-        RuleFor(x => x.TicketId).NotEmpty();
-        RuleFor(x => x.Request).NotNull();
-        RuleFor(x => x.Request.ReplacementAssetId).GreaterThan(0);
-        RuleFor(x => x.Request.Note).MaximumLength(200);
+        RuleFor(x => x.TicketId)
+            .NotEmpty().WithMessage("Ticket ID is required.");
+
+        RuleFor(x => x.Request)
+            .NotNull().WithMessage("Request body is required.");
+
+        RuleFor(x => x.Request.ReplacementAssetId)
+            .GreaterThan(0).WithMessage("Please select a replacement asset.");
+
+        RuleFor(x => x.Request.Note)
+            .MaximumLength(200).WithMessage("Note must not exceed 200 characters.");
     }
 }
