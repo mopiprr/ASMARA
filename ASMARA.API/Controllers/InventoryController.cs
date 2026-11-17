@@ -67,7 +67,7 @@ public class InventoryController(IMediator mediator) : ControllerBase
     /// Mengambil seluruh unit fisik aset individual dari suatu barang Non-Consumable (AssetTag, status, pemegang).
     /// </summary>
     [HttpGet("items/{id:int}/assets")]
-    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    [Authorize(Roles = $"{Roles.Inventory}")]
     public async Task<ActionResult<List<InventoryItemAssetDto>>> GetItemAssets(
         int id,
         CancellationToken ct = default)
@@ -81,7 +81,7 @@ public class InventoryController(IMediator mediator) : ControllerBase
     /// Jika kategori bertipe Non-Consumable, sistem otomatis men-generate Asset Tag (AST-XXXXXX) sejumlah initialStock.
     /// </summary>
     [HttpPost("items")]
-    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    [Authorize(Roles = $"{Roles.Inventory}")]
     public async Task<ActionResult<ItemInventoryResponseDto>> CreateItem(
         [FromBody] CreateInventoryItemRequestDto dto,
         CancellationToken ct = default)
@@ -95,7 +95,7 @@ public class InventoryController(IMediator mediator) : ControllerBase
     /// Untuk Non-Consumable, penambahan/pengurangan stok akan disinkronkan dengan entri aset di tabel Asset.
     /// </summary>
     [HttpPut("items/{id:int}")]
-    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    [Authorize(Roles = $"{Roles.Inventory}")]
     public async Task<ActionResult<ItemInventoryResponseDto>> UpdateItem(
         int id,
         [FromBody] UpdateInventoryItemRequestDto dto,
@@ -110,7 +110,7 @@ public class InventoryController(IMediator mediator) : ControllerBase
     /// Unit aset yang dihapus otomatis dicabut dari tabel Asset sehingga tidak lagi muncul di halaman /assets.
     /// </summary>
     [HttpPost("items/{id:int}/delete-units")]
-    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    [Authorize(Roles = $"{Roles.Inventory}")]
     public async Task<ActionResult<DeleteInventoryUnitsResultDto>> DeleteUnits(
         int id,
         [FromBody] DeleteInventoryUnitsRequestDto dto,
@@ -125,7 +125,7 @@ public class InventoryController(IMediator mediator) : ControllerBase
     /// Gagal jika masih terdapat aset yang sedang digunakan (in-use) oleh karyawan.
     /// </summary>
     [HttpDelete("items/{id:int}")]
-    [Authorize(Roles = $"{Roles.Inventory},{Roles.Admin}")]
+    [Authorize(Roles = $"{Roles.Inventory}")]
     public async Task<IActionResult> DeleteItem(
         int id,
         CancellationToken ct = default)

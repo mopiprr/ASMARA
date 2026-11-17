@@ -38,7 +38,7 @@ namespace ASMARA.API.Controllers
             => Ok(await sender.Send(query, ct));
 
         [HttpPost("adjust")]
-        [Authorize(Roles = $"{Roles.Finance},{Roles.Admin}")]
+        [Authorize(Roles = $"{Roles.Finance}")]
         public async Task<ActionResult<DepartmentBudgetDto>> AdjustBudget([FromBody] AdjustBudgetRequestDto request, CancellationToken ct)
             => Ok(await sender.Send(new AdjustBudgetCommand(request), ct));
 
