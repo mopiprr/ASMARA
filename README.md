@@ -166,5 +166,6 @@ Setelah berjalan, buka **Swagger UI** melalui browser:
 
 ## 👨‍💻 Tim Pengembang
 
-- **[Nama Anggota 1]** — *Role / Bagian*
-- **[Nama Anggota 2]** — *Role / Bagian*
+- **Mu'aafii Putra Ramadhan** 
+- **Fran Dello** 
+- - **Muhammad Bagas Ruliansyah** 
