@@ -21,7 +21,7 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketFlowServic
     {
         var request = command.Request;
 
-        var (ticket, result) = await uow.ExecuteInTransactionAsync(async ct =>
+        var (ticket, result, childTicket, childNextApproverId) = await uow.ExecuteInTransactionAsync(async ct =>
         {
             var ticket = await uow.Tickets.Query()
                 .Include(t => t.Employee)
@@ -32,6 +32,8 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketFlowServic
 
             var detail = ticket.MaintenanceDetail!;
             TransitionResult result;
+            Ticket? child = null;
+            Guid? childApproverId = null;
 
             if (request.Available)
             {
@@ -41,7 +43,7 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketFlowServic
             }
             else
             {
-                var child = await ChildProcurementBuilder.BuildAsync(
+                child = await ChildProcurementBuilder.BuildAsync(
                     uow.Tickets, uow.ProcurementDetails, uow.ItemInventories, uow.ItemCategories,
                     request.Subject!, request.Description, request.Items!, ct);
 
@@ -49,14 +51,30 @@ public class ProcessReplacementCommandHandler(IUnitOfWork uow, ITicketFlowServic
                     ticket.Id, TicketActionEnum.ReplacementUnavailable, child, request.Note, ct);
 
                 result = childResult.Parent;
+                childApproverId = childResult.Child.NextTaskEmployeeId;
                 await RetireOldAssetAsync(detail.AssetId, result.FromStep, ct);
             }
 
             await uow.SaveChangesAsync(ct);
-            return (ticket, result);
+            return (ticket, result, child, childApproverId);
         }, ct);
 
         var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+
+        if (childTicket is not null)
+        {
+            Employee? childApprover = null;
+            if (childNextApproverId.HasValue)
+            {
+                childApprover = await uow.Employees.GetByIdAsync(childNextApproverId.Value, ct);
+            }
+            else if (actor.ManagerId.HasValue)
+            {
+                childApprover = await uow.Employees.GetByIdAsync(actor.ManagerId.Value, ct);
+            }
+
+            await mediator.Publish(new TicketCreatedEvent(childTicket, actor, childApprover), ct);
+        }
         var action = request.Available ? TicketActionEnum.ReplacementAvailable : TicketActionEnum.ReplacementUnavailable;
         await mediator.Publish(new TicketStatusChangedEvent(
             ticket, 

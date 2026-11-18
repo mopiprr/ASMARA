@@ -1,6 +1,7 @@
 ﻿using ASMARA.API.Common.Exceptions;
 using ASMARA.API.Common.Security;
 using ASMARA.API.Data.Repositories;
+using ASMARA.API.Entities;
 using ASMARA.API.Enums;
 using ASMARA.API.Features.Maintenance.Common;
 using ASMARA.API.Features.Tickets.Events;
@@ -20,7 +21,7 @@ public class OrderPartCommandHandler(IUnitOfWork uow, ITicketFlowService ticketF
     {
         var request = command.Request;
 
-        var (ticket, result) = await uow.ExecuteInTransactionAsync(async ct =>
+        var (ticket, result, child) = await uow.ExecuteInTransactionAsync(async ct =>
         {
             var ticket = await uow.Tickets.Query()
                 .Include(t => t.Employee)
@@ -36,15 +37,27 @@ public class OrderPartCommandHandler(IUnitOfWork uow, ITicketFlowService ticketF
                 ticket.Id, TicketActionEnum.OrderPart, child, request.Note, ct);
 
             await uow.SaveChangesAsync(ct);
-            return (ticket, result);
+            return (ticket, result, child);
         }, ct);
 
         var actor = await uow.Employees.GetByIdAsync(currentUser.EmployeeId, ct) ?? ticket.Employee;
+        Employee? childApprover = null;
+        if (result.Child.NextTaskEmployeeId.HasValue)
+        {
+            childApprover = await uow.Employees.GetByIdAsync(result.Child.NextTaskEmployeeId.Value, ct);
+        }
+        else if (actor.ManagerId.HasValue)
+        {
+            childApprover = await uow.Employees.GetByIdAsync(actor.ManagerId.Value, ct);
+        }
+
+        await mediator.Publish(new TicketCreatedEvent(child, actor, childApprover), ct);
+
         await mediator.Publish(new TicketStatusChangedEvent(
-            ticket, 
-            ticket.Employee, 
-            actor, 
-            TicketActionEnum.OrderPart.ToString(), 
+            ticket,
+            ticket.Employee,
+            actor,
+            TicketActionEnum.OrderPart.ToString(),
             request.Note), ct);
 
         return result;
